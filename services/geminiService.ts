@@ -113,14 +113,22 @@ export const generateChatStream = async (
         tools.push({ googleSearch: {} });
     }
 
-    // Format History: Important to filter out empty parts or invalid roles
-    // Remove the last message (current prompt) as it's sent via sendMessageStream
+    // Format History: Ensure strictly User/Model alternation and no empty parts
+    // If a previous model response was only an image (empty text), we must inject a placeholder.
+    // We removed the .filter() to avoid breaking the alternation.
     const previousHistory = history.slice(0, -1)
-        .map(msg => ({
-            role: msg.role === Role.USER ? 'user' : 'model',
-            parts: [{ text: msg.text || " " }] // Fallback for empty text (e.g. image-only outputs)
-        }))
-        .filter(msg => msg.parts[0].text.trim() !== ""); // Filter out completely empty messages if needed, though fallback " " prevents API error
+        .map(msg => {
+            const role = msg.role === Role.USER ? 'user' : 'model';
+            // If text is missing or empty, provide a fallback placeholder to keep API happy
+            let text = msg.text;
+            if (!text || text.trim() === "") {
+                text = msg.generatedImage ? "[Image Generated]" : "[Content]";
+            }
+            return {
+                role,
+                parts: [{ text }]
+            };
+        });
 
     const chat = ai.chats.create({
       model: selectedModel, 

@@ -66,7 +66,13 @@ const App: React.FC = () => {
     try {
       const savedSessions = localStorage.getItem(STORAGE_KEY_HISTORY);
       if (savedSessions) {
-        setSessions(JSON.parse(savedSessions));
+        const parsed = JSON.parse(savedSessions);
+        setSessions(parsed);
+        if (parsed.length > 0) {
+          setCurrentSessionId(parsed[0].id);
+        } else {
+          createNewSession();
+        }
       } else {
         createNewSession();
       }
@@ -166,7 +172,27 @@ const App: React.FC = () => {
   };
 
   const sendMessage = async () => {
-    if ((!inputValue.trim() && !attachedImage) || isLoading || !currentSessionId) return;
+    if ((!inputValue.trim() && !attachedImage) || isLoading) return;
+    
+    // Ensure we have a valid session
+    let activeSessionId = currentSessionId;
+    if (!activeSessionId) {
+        // Fallback: try to find the first session or create new
+        if (sessions.length > 0) {
+            activeSessionId = sessions[0].id;
+            setCurrentSessionId(activeSessionId);
+        } else {
+            const newSession: ChatSession = {
+                id: Date.now().toString(),
+                title: 'New Chat',
+                updatedAt: Date.now(),
+                messages: []
+            };
+            setSessions([newSession]);
+            activeSessionId = newSession.id;
+            setCurrentSessionId(activeSessionId);
+        }
+    }
 
     const currentPrompt = inputValue;
     const tempImage = attachedImage; 
@@ -212,7 +238,7 @@ const App: React.FC = () => {
         let updatedHistory: Message[] = [];
         
         setSessions(prev => prev.map(session => {
-            if (session.id === currentSessionId) {
+            if (session.id === activeSessionId) {
                 const title = session.messages.length === 0 
                     ? (currentPrompt.slice(0, 30) || "New Chat") 
                     : session.title;
@@ -242,7 +268,7 @@ const App: React.FC = () => {
             { imageMode: isImageMode, webSearch: isWebSearch },
             (textChunk, grounding, generatedImageId) => {
                 setSessions(prev => prev.map(session => {
-                    if (session.id === currentSessionId) {
+                    if (session.id === activeSessionId) {
                         return {
                             ...session,
                             messages: session.messages.map(m => {
@@ -265,24 +291,21 @@ const App: React.FC = () => {
 
     } catch (error: any) {
         console.error("Send Message Error:", error);
-        alert(`Error: ${error.message || "Something went wrong"}`);
-        
-        // Mark the assistant message as error
+        // Don't alert, just show in chat
         setSessions(prev => prev.map(session => {
-            if (session.id === currentSessionId) {
+            if (session.id === activeSessionId) {
                 const lastMsg = session.messages[session.messages.length - 1];
                 if (lastMsg.role === Role.MODEL && !lastMsg.text) {
                     return {
                         ...session,
                         messages: session.messages.map(m => 
-                            m.id === lastMsg.id ? { ...m, text: "Error: Failed to generate response.", isError: true } : m
+                            m.id === lastMsg.id ? { ...m, text: `Error: ${error.message || "Request failed"}. Please try again.`, isError: true } : m
                         )
                     };
                 }
             }
             return session;
         }));
-
     } finally {
         setIsLoading(false);
     }
