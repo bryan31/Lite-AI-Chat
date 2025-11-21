@@ -39,5 +39,5 @@ export const MODELS = {
   GEMINI_3_PRO: 'gemini-3-pro-preview',
   GEMINI_2_5_PRO: 'gemini-2.5-pro', 
   GEMINI_2_5_FLASH: 'gemini-2.5-flash',
-  GEMINI_IMAGE: 'gemini-2.5-flash-image',
+  GEMINI_IMAGE: 'gemini-3-pro-image-preview',
 };
