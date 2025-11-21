@@ -1,8 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { MessageItem } from './components/MessageItem';
 import { generateChatStream } from './services/geminiService';
+import { saveImageToDB } from './services/imageDb';
 import { ChatSession, Message, Role, Theme, GroundingSource } from './types';
+import { ImageWithLoader } from './components/ImageWithLoader';
 import { 
   Send, 
   Menu, 
@@ -11,58 +14,12 @@ import {
   Moon, 
   Sun,
   Paperclip,
-  X,
   Sparkles
 } from 'lucide-react';
 
 // Local Storage Keys
 const STORAGE_KEY_THEME = 'gemini-pro-theme';
 const STORAGE_KEY_HISTORY = 'gemini-pro-history';
-
-// Helper component to prevent main thread freeze when rendering large base64 previews
-const AttachmentPreview = ({ data, onRemove }: { data: string, onRemove: () => void }) => {
-  const [src, setSrc] = useState<string>('');
-  
-  useEffect(() => {
-    let active = true;
-    let objectUrl = '';
-
-    const convert = async () => {
-      try {
-        // Using fetch is often more efficient for Data URIs than manual atob in JS for large strings
-        const res = await fetch(data);
-        const blob = await res.blob();
-        if (!active) return;
-        objectUrl = URL.createObjectURL(blob);
-        setSrc(objectUrl);
-      } catch (e) {
-        console.error("Preview generation failed", e);
-        if (active) setSrc(data); // Fallback
-      }
-    };
-
-    convert();
-
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [data]);
-
-  if (!src) return <div className="h-16 w-16 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />;
-
-  return (
-      <div className="relative inline-block group/img animate-fade-in">
-          <img src={src} alt="Preview" className="h-16 w-16 object-cover rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm" />
-          <button 
-              onClick={onRemove}
-              className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full p-1 opacity-0 group-hover/img:opacity-100 transition-opacity shadow-md"
-          >
-              <X size={10} />
-          </button>
-      </div>
-  );
-};
 
 const App: React.FC = () => {
   // --- State ---
@@ -77,8 +34,10 @@ const App: React.FC = () => {
   const [isImageMode, setIsImageMode] = useState(false);
   const [isWebSearch, setIsWebSearch] = useState(false);
 
-  // Attachments (for image editing or multimodal)
-  const [attachedImage, setAttachedImage] = useState<string | null>(null); // Base64
+  // Attachments
+  // Note: We keep current attachment as Base64 (or ID) in state for preview, 
+  // but persist to DB when sending.
+  const [attachedImage, setAttachedImage] = useState<string | null>(null); 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -123,32 +82,15 @@ const App: React.FC = () => {
     }
   }, [theme]);
 
-  // Persist Sessions with Safety Check
+  // Persist Sessions
   useEffect(() => {
     if (sessions.length > 0) {
       try {
+        // Now we can safely save full session objects because images are just IDs strings
         const json = JSON.stringify(sessions);
         localStorage.setItem(STORAGE_KEY_HISTORY, json);
       } catch (e) {
-        console.warn("LocalStorage quota exceeded or error saving. Attempting to save lite version (no images).", e);
-        
-        // If saving fails (likely due to base64 images being too large), save a "lite" version without images
-        // This prevents the app from crashing/freezing due to storage limits
-        try {
-            const liteSessions = sessions.map(s => ({
-                ...s,
-                messages: s.messages.map(m => ({
-                    ...m,
-                    // Strip heavy base64 data for persistence if full save fails
-                    images: undefined,
-                    generatedImage: undefined,
-                    text: m.text + (m.generatedImage ? "\n\n*[Image not saved to history due to storage limits]*" : "")
-                }))
-            }));
-            localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(liteSessions));
-        } catch (retryError) {
-            console.error("Failed to save even lite history", retryError);
-        }
+        console.error("Error saving history:", e);
       }
     }
   }, [sessions]);
@@ -186,7 +128,6 @@ const App: React.FC = () => {
       if (remaining.length > 0) {
         setCurrentSessionId(remaining[0].id);
       } else {
-        // Create new session directly in state without full reset logic to avoid flicker
         const newSession: ChatSession = {
             id: Date.now().toString(),
             title: 'New Chat',
@@ -204,17 +145,18 @@ const App: React.FC = () => {
     if (file) {
         const reader = new FileReader();
         reader.onloadend = () => {
+            // We keep base64 in state for instant preview, but send to DB on submit
             setAttachedImage(reader.result as string);
         };
         reader.readAsDataURL(file);
     }
   };
 
-  const handleImageEditRequest = (imageUrl: string) => {
-      setAttachedImage(imageUrl);
+  const handleImageEditRequest = (imageId: string) => {
+      // We set the ID directly. The input preview component handles IDs too.
+      setAttachedImage(imageId);
       setIsImageMode(true);
       if (textareaRef.current) textareaRef.current.focus();
-      // Small delay to allow state update before scroll
       setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -224,19 +166,32 @@ const App: React.FC = () => {
     if ((!inputValue.trim() && !attachedImage) || isLoading || !currentSessionId) return;
 
     const currentPrompt = inputValue;
-    const currentImage = attachedImage;
+    const tempImage = attachedImage; // This could be Base64 or an ID
     
     setInputValue('');
     setAttachedImage(null);
     setIsLoading(true);
 
-    // Create User Message
+    let persistedImageId: string | undefined = undefined;
+    
+    // If there is an image attached...
+    if (tempImage) {
+        try {
+             // If it's Base64 (new upload), save to DB and get ID. 
+             // If it's already an ID (from edit click), saveImageToDB returns it as is.
+             persistedImageId = await saveImageToDB(tempImage);
+        } catch (e) {
+            console.error("Failed to save input image to DB", e);
+        }
+    }
+
+    // Create User Message with ID only
     const userMsg: Message = {
       id: Date.now().toString(),
       role: Role.USER,
       text: currentPrompt || (isImageMode ? "Generate image" : "Sent an image"),
       timestamp: Date.now(),
-      images: currentImage ? [currentImage] : undefined
+      images: persistedImageId ? [persistedImageId] : undefined
     };
 
     setSessions(prev => prev.map(session => {
@@ -256,9 +211,9 @@ const App: React.FC = () => {
     }));
 
     const currentSession = sessions.find(s => s.id === currentSessionId);
+    // For the context sent to API, we pass the ID. The service handles resolution.
     const history = currentSession ? [...currentSession.messages, userMsg] : [userMsg];
 
-    // Placeholder for Assistant Message
     const assistantMsgId = (Date.now() + 1).toString();
     let assistantText = "";
 
@@ -269,7 +224,7 @@ const App: React.FC = () => {
             messages: [...session.messages, {
                 id: assistantMsgId,
                 role: Role.MODEL,
-                text: "", // Empty text triggers the LoadingDots animation
+                text: "",
                 timestamp: Date.now(),
             }]
           };
@@ -280,9 +235,9 @@ const App: React.FC = () => {
     await generateChatStream(
         history,
         currentPrompt,
-        currentImage,
+        persistedImageId || null, 
         { imageMode: isImageMode, webSearch: isWebSearch },
-        (textChunk, grounding, generatedImage) => {
+        (textChunk, grounding, generatedImageId) => {
             assistantText = textChunk;
 
             setSessions(prev => prev.map(session => {
@@ -295,7 +250,7 @@ const App: React.FC = () => {
                                     ...m,
                                     text: assistantText,
                                     groundingSources: grounding,
-                                    generatedImage: generatedImage // Update with image if present
+                                    generatedImage: generatedImageId // This is now an ID from the service
                                 };
                             }
                             return m;
@@ -412,7 +367,7 @@ const App: React.FC = () => {
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-surface-light via-surface-light to-transparent dark:from-surface-dark dark:via-surface-dark pt-12">
             <div className="max-w-3xl mx-auto">
                 
-                {/* Input Container - Clean, no harsh borders */}
+                {/* Input Container */}
                 <div className={`
                     relative group rounded-[28px] 
                     bg-[#f0f4f9] dark:bg-[#1e1f20]
@@ -424,9 +379,10 @@ const App: React.FC = () => {
                     
                     {attachedImage && (
                         <div className="px-4 pt-4">
-                            <AttachmentPreview 
-                                data={attachedImage} 
-                                onRemove={() => setAttachedImage(null)} 
+                            <ImageWithLoader 
+                                src={attachedImage} 
+                                onRemove={() => setAttachedImage(null)}
+                                className="h-16 w-16 object-cover rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"
                             />
                         </div>
                     )}

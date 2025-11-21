@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Message, Role } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { User, Sparkles, Image as ImageIcon, Copy, RotateCcw } from 'lucide-react';
+import { ImageWithLoader } from './ImageWithLoader';
 
 interface MessageItemProps {
   message: Message;
-  onEditImage?: (imageUrl: string) => void;
+  onEditImage?: (imageId: string) => void;
 }
 
 const LoadingDots = () => (
@@ -16,66 +18,10 @@ const LoadingDots = () => (
     </div>
 );
 
-// Helper to create a blob URL from base64 for better performance than data URI
-// Optimized to use async fetch to avoid blocking main thread with large strings
-const useBlobUrl = (base64String?: string) => {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!base64String) {
-        setBlobUrl(null);
-        return;
-    }
-
-    let active = true;
-    let url = '';
-
-    const convert = async () => {
-        try {
-            // Fetch is usually cleaner/faster for Data URI to Blob conversion than synchronous atob
-            const res = await fetch(base64String);
-            const blob = await res.blob();
-            if (!active) return;
-            url = URL.createObjectURL(blob);
-            setBlobUrl(url);
-        } catch (e) {
-            console.error("Blob conversion failed", e);
-            // Fallback to original string if conversion fails
-            if (active) setBlobUrl(base64String);
-        }
-    };
-
-    convert();
-
-    return () => {
-        active = false;
-        if (url) URL.revokeObjectURL(url);
-    };
-  }, [base64String]);
-
-  return blobUrl;
-};
-
-// Component to render a single image blob
-const ImageAttachment = ({ base64Data }: { base64Data: string }) => {
-    const url = useBlobUrl(base64Data);
-    if (!url) return null;
-    return (
-        <img 
-            src={url} 
-            alt="Attachment" 
-            className="rounded-xl shadow-sm max-w-[200px] md:max-w-xs border border-gray-200 dark:border-gray-700 mb-3" 
-        />
-    );
-};
-
 export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }) => {
   const isUser = message.role === Role.USER;
   const [copied, setCopied] = useState(false);
   
-  // Use Blob URL for output image to avoid React Markdown parser freeze with huge base64
-  const generatedImageUrl = useBlobUrl(message.generatedImage);
-
   const handleCopy = () => {
       navigator.clipboard.writeText(message.text);
       setCopied(true);
@@ -117,8 +63,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
             {/* User Input Images */}
             {message.images && message.images.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
-                    {message.images.map((img, idx) => (
-                        <ImageAttachment key={idx} base64Data={img} />
+                    {message.images.map((imgId, idx) => (
+                         <ImageWithLoader 
+                            key={idx} 
+                            src={imgId} 
+                            className="rounded-xl shadow-sm max-w-[200px] md:max-w-xs border border-gray-200 dark:border-gray-700 mb-3"
+                         />
                     ))}
                 </div>
             )}
@@ -138,11 +88,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
             )}
 
             {/* Generated Image Content */}
-            {generatedImageUrl && (
+            {message.generatedImage && (
                 <div className="mt-4">
-                    <img 
-                        src={generatedImageUrl} 
-                        alt="Generated content" 
+                    <ImageWithLoader 
+                        src={message.generatedImage} 
                         className="rounded-xl shadow-md max-w-full md:max-w-md border border-gray-200 dark:border-gray-700"
                     />
                 </div>
