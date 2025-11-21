@@ -37,7 +37,7 @@ export type Theme = 'light' | 'dark';
 // Model constants for easier management
 export const MODELS = {
   GEMINI_3_PRO: 'gemini-3-pro-preview',
-  GEMINI_2_5_PRO: 'gemini-2.0-pro-exp-02-05', // Mapping 2.5 Pro request to current 2.0 Pro Exp
+  GEMINI_2_5_PRO: 'gemini-2.5-pro', 
   GEMINI_2_5_FLASH: 'gemini-2.5-flash',
   GEMINI_IMAGE: 'gemini-2.5-flash-image',
 };
