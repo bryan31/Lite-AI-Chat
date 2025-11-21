@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { Message, Role, GroundingSource } from "../types";
 
 // Define models based on guidelines
@@ -47,7 +47,16 @@ export const generateChatStream = async (
       const response = await ai.models.generateContent({
         model: IMAGE_MODEL,
         contents: { parts },
-        config: {}
+        config: {
+            // Relax safety filters to minimize refusals (BLOCK_ONLY_HIGH is the least restrictive standard setting)
+            safetySettings: [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                { category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+            ]
+        }
       });
 
       let textOutput = "";
@@ -71,7 +80,7 @@ export const generateChatStream = async (
           // If text exists but no image, the model likely refused generation or treated it as chat.
           const failureMessage = textOutput 
             ? `${textOutput}\n\n*[System: No image was generated. The model may have interpreted this as a chat request or refused the prompt safety checks.]*`
-            : "Failed to generate image. The model might have refused the prompt.";
+            : "Failed to generate image. The model might have refused the prompt due to safety filters.";
             
           onChunk(failureMessage, undefined, undefined);
       }
