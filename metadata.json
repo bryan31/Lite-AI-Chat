@@ -1,0 +1,5 @@
+{
+  "name": "Gemini Pro Chat",
+  "description": "A powerful AI chat interface powered by Gemini 3 Pro and Nano Banana models, featuring text generation, image creation/editing, reasoning display, and web grounding.",
+  "requestFramePermissions": []
+}

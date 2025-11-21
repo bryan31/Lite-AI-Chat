@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gemini Pro Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              gemini: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                200: '#bae6fd',
+                300: '#7dd3fc',
+                400: '#38bdf8',
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+                800: '#075985',
+                900: '#0c4a6e',
+              },
+              'surface-light': '#ffffff',
+              'surface-dark': '#131314',
+              'surface-variant-dark': '#1e1f20',
+            },
+            animation: {
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'shimmer': 'shimmer 2.5s linear infinite',
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
+              'bounce-delay-1': 'bounce 1s infinite 200ms',
+              'bounce-delay-2': 'bounce 1s infinite 400ms',
+            },
+            keyframes: {
+              shimmer: {
+                '0%': { backgroundPosition: '-1000px 0' },
+                '100%': { backgroundPosition: '1000px 0' },
+              },
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            }
+          },
+        },
+      };
+    </script>
+    <style>
+      /* Custom scrollbar for a cleaner look */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #334155;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+      }
+      
+      /* Markdown content styles - Cleaner, less boxed */
+      .markdown-content { font-size: 1rem; line-height: 1.75; color: inherit; }
+      .markdown-content p { margin-bottom: 1em; }
+      .markdown-content p:last-child { margin-bottom: 0; }
+      .markdown-content h1, .markdown-content h2, .markdown-content h3 { margin-top: 1.5em; margin-bottom: 0.75em; font-weight: 600; letter-spacing: -0.02em; }
+      .markdown-content h1 { font-size: 1.75rem; }
+      .markdown-content h2 { font-size: 1.5rem; }
+      .markdown-content h3 { font-size: 1.25rem; }
+      .markdown-content ul, .markdown-content ol { margin-bottom: 1.25em; padding-left: 1.5em; }
+      .markdown-content li { margin-bottom: 0.5em; }
+      .markdown-content ul { list-style-type: disc; }
+      .markdown-content ol { list-style-type: decimal; }
+      
+      /* Blockquote redesign */
+      .markdown-content blockquote { 
+        border-left: 4px solid #3b82f6; 
+        padding-left: 1em; 
+        color: #64748b; 
+        margin: 1.5em 0;
+        font-style: italic;
+        background: transparent;
+      }
+      .dark .markdown-content blockquote { color: #94a3b8; }
+      
+      /* Code block redesign */
+      .markdown-content pre { 
+        border-radius: 0.75rem; 
+        margin: 1em 0; 
+        overflow-x: auto; 
+        border: 1px solid #e2e8f0;
+      }
+      .dark .markdown-content pre { border-color: #334155; }
+      
+      .markdown-content code { 
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.9em;
+      }
+      
+      /* Table redesign */
+      .markdown-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5em; font-size: 0.95em; }
+      .markdown-content th, .markdown-content td { border-bottom: 1px solid #e2e8f0; padding: 0.75em 0.5em; text-align: left; }
+      .dark .markdown-content th, .dark .markdown-content td { border-color: #334155; }
+      .markdown-content th { font-weight: 600; color: #475569; }
+      .dark .markdown-content th { color: #cbd5e1; }
+      
+      /* Loading Dots Animation Delay */
+      .animate-bounce-1 { animation: bounce 1s infinite; animation-delay: 0ms; }
+      .animate-bounce-2 { animation: bounce 1s infinite; animation-delay: 200ms; }
+      .animate-bounce-3 { animation: bounce 1s infinite; animation-delay: 400ms; }
+      
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "rehype-highlight": "https://aistudiocdn.com/rehype-highlight@^7.0.2",
+    "remark-gfm": "https://aistudiocdn.com/remark-gfm@^4.0.1",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-surface-light text-gray-900 dark:bg-surface-dark dark:text-gray-100 transition-colors duration-200">
+    <div id="root"></div>
+  </body>
+</html>
