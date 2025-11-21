@@ -1,11 +1,7 @@
 
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { Message, Role, GroundingSource } from "../types";
+import { Message, Role, GroundingSource, MODELS } from "../types";
 import { saveImageToDB, getImageFromDB } from "./imageDb";
-
-// Define models based on guidelines
-const TEXT_MODEL = 'gemini-3-pro-preview';
-const IMAGE_MODEL = 'gemini-2.5-flash-image';
 
 // Helper to init AI
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -14,6 +10,7 @@ export const generateChatStream = async (
   history: Message[],
   currentPrompt: string,
   imageContext: string | null, // Can be Base64 OR an ID (img_...)
+  selectedModel: string, // Dynamic model selection
   config: { imageMode: boolean; webSearch: boolean },
   onChunk: (text: string, grounding?: GroundingSource[], generatedImageId?: string) => void
 ) => {
@@ -22,7 +19,12 @@ export const generateChatStream = async (
   // Resolve imageContext: If it is an ID, fetch the real base64 data
   let realImageBase64 = imageContext;
   if (imageContext && imageContext.startsWith('img_')) {
-      realImageBase64 = await getImageFromDB(imageContext);
+      try {
+          const fetched = await getImageFromDB(imageContext);
+          if (fetched) realImageBase64 = fetched;
+      } catch (e) {
+          console.error("Error fetching image from DB:", e);
+      }
   }
 
   if (config.imageMode) {
@@ -53,7 +55,7 @@ export const generateChatStream = async (
       }
 
       const response = await ai.models.generateContent({
-        model: IMAGE_MODEL,
+        model: MODELS.GEMINI_IMAGE, // Always use image model in image mode
         contents: { parts },
         config: {
             // Relax safety filters to minimize refusals
@@ -111,23 +113,22 @@ export const generateChatStream = async (
         tools.push({ googleSearch: {} });
     }
 
-    // Prepare history. Since we only store IDs in the UI history, we need to ensure 
-    // text mode doesn't choke. Gemini 3 Pro text chat doesn't support image history 
-    // in the same way as 'imageMode', so we usually strip images for text chat history 
-    // OR we would need to resolve them. For simplicity in this app, we strip previous images for text chat context
-    // to save tokens, unless we want multimodal chat.
-    const previousHistory = history.slice(0, -1).map(msg => ({
-        role: msg.role === Role.USER ? 'user' : 'model',
-        parts: [{ text: msg.text }] // We only send text history for standard chat to keep it fast
-    }));
+    // Format History: Important to filter out empty parts or invalid roles
+    // Remove the last message (current prompt) as it's sent via sendMessageStream
+    const previousHistory = history.slice(0, -1)
+        .map(msg => ({
+            role: msg.role === Role.USER ? 'user' : 'model',
+            parts: [{ text: msg.text || " " }] // Fallback for empty text (e.g. image-only outputs)
+        }))
+        .filter(msg => msg.parts[0].text.trim() !== ""); // Filter out completely empty messages if needed, though fallback " " prevents API error
 
     const chat = ai.chats.create({
-      model: TEXT_MODEL,
+      model: selectedModel, 
       history: previousHistory,
       config: {
         systemInstruction,
         tools: tools.length > 0 ? tools : undefined,
-      }
+      },
     });
     
     const result = await chat.sendMessageStream({ message: currentPrompt });
@@ -136,8 +137,17 @@ export const generateChatStream = async (
     let extractedGrounding: GroundingSource[] = [];
 
     for await (const chunk of result) {
-      const textChunk = chunk.text || "";
-      fullText += textChunk;
+      if (chunk.candidates?.[0]?.content?.parts) {
+          for (const part of chunk.candidates[0].content.parts) {
+              if (part.text) {
+                  fullText += part.text;
+              }
+          }
+      } else {
+          // Fallback for some models
+          const textChunk = chunk.text || "";
+          fullText += textChunk;
+      }
 
       if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
         const chunks = chunk.candidates[0].groundingMetadata.groundingChunks;
@@ -148,11 +158,15 @@ export const generateChatStream = async (
         });
       }
 
-      onChunk(fullText.trimStart(), extractedGrounding.length > 0 ? extractedGrounding : undefined, undefined);
+      onChunk(
+          fullText.trimStart(), 
+          extractedGrounding.length > 0 ? extractedGrounding : undefined, 
+          undefined
+      );
     }
 
   } catch (error: any) {
     console.error("Chat Stream Error:", error);
-    onChunk(`Error: ${error.message}`, undefined, undefined);
+    onChunk(`Error: ${error.message}\n\n*Tip: If using Gemini 3 Pro, try switching to Gemini 2.5 Flash if you experience issues.*`, undefined, undefined);
   }
 };

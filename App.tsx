@@ -4,7 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { MessageItem } from './components/MessageItem';
 import { generateChatStream } from './services/geminiService';
 import { saveImageToDB } from './services/imageDb';
-import { ChatSession, Message, Role, Theme, GroundingSource } from './types';
+import { ChatSession, Message, Role, Theme, MODELS } from './types';
 import { ImageWithLoader } from './components/ImageWithLoader';
 import { 
   Send, 
@@ -14,7 +14,8 @@ import {
   Moon, 
   Sun,
   Paperclip,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from 'lucide-react';
 
 // Local Storage Keys
@@ -33,10 +34,14 @@ const App: React.FC = () => {
   // Config State
   const [isImageMode, setIsImageMode] = useState(false);
   const [isWebSearch, setIsWebSearch] = useState(false);
+  
+  // Model Selection State
+  const [selectedModel, setSelectedModel] = useState<string>(MODELS.GEMINI_3_PRO);
+
+  // Effective Model Calculation
+  const effectiveModel = isImageMode ? MODELS.GEMINI_IMAGE : selectedModel;
 
   // Attachments
-  // Note: We keep current attachment as Base64 (or ID) in state for preview, 
-  // but persist to DB when sending.
   const [attachedImage, setAttachedImage] = useState<string | null>(null); 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -86,7 +91,6 @@ const App: React.FC = () => {
   useEffect(() => {
     if (sessions.length > 0) {
       try {
-        // Now we can safely save full session objects because images are just IDs strings
         const json = JSON.stringify(sessions);
         localStorage.setItem(STORAGE_KEY_HISTORY, json);
       } catch (e) {
@@ -128,6 +132,7 @@ const App: React.FC = () => {
       if (remaining.length > 0) {
         setCurrentSessionId(remaining[0].id);
       } else {
+        // Create new session if all deleted
         const newSession: ChatSession = {
             id: Date.now().toString(),
             title: 'New Chat',
@@ -145,7 +150,6 @@ const App: React.FC = () => {
     if (file) {
         const reader = new FileReader();
         reader.onloadend = () => {
-            // We keep base64 in state for instant preview, but send to DB on submit
             setAttachedImage(reader.result as string);
         };
         reader.readAsDataURL(file);
@@ -153,7 +157,6 @@ const App: React.FC = () => {
   };
 
   const handleImageEditRequest = (imageId: string) => {
-      // We set the ID directly. The input preview component handles IDs too.
       setAttachedImage(imageId);
       setIsImageMode(true);
       if (textareaRef.current) textareaRef.current.focus();
@@ -166,103 +169,123 @@ const App: React.FC = () => {
     if ((!inputValue.trim() && !attachedImage) || isLoading || !currentSessionId) return;
 
     const currentPrompt = inputValue;
-    const tempImage = attachedImage; // This could be Base64 or an ID
+    const tempImage = attachedImage; 
     
+    // Clear UI immediately
     setInputValue('');
     setAttachedImage(null);
     setIsLoading(true);
 
-    let persistedImageId: string | undefined = undefined;
-    
-    // If there is an image attached...
-    if (tempImage) {
-        try {
-             // If it's Base64 (new upload), save to DB and get ID. 
-             // If it's already an ID (from edit click), saveImageToDB returns it as is.
-             persistedImageId = await saveImageToDB(tempImage);
-        } catch (e) {
-            console.error("Failed to save input image to DB", e);
+    try {
+        let persistedImageId: string | undefined = undefined;
+        
+        // 1. Persist Image if exists
+        if (tempImage) {
+            try {
+                 persistedImageId = await saveImageToDB(tempImage);
+            } catch (e) {
+                console.error("Failed to save input image to DB", e);
+                alert("Failed to process image. Please try again.");
+                setIsLoading(false);
+                return;
+            }
         }
-    }
 
-    // Create User Message with ID only
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: Role.USER,
-      text: currentPrompt || (isImageMode ? "Generate image" : "Sent an image"),
-      timestamp: Date.now(),
-      images: persistedImageId ? [persistedImageId] : undefined
-    };
-
-    setSessions(prev => prev.map(session => {
-      if (session.id === currentSessionId) {
-        const title = session.messages.length === 0 
-            ? (currentPrompt.slice(0, 30) || "Image Generation") 
-            : session.title;
-            
-        return {
-          ...session,
-          title,
-          messages: [...session.messages, userMsg],
-          updatedAt: Date.now()
+        const userMsg: Message = {
+            id: Date.now().toString(),
+            role: Role.USER,
+            text: currentPrompt || (isImageMode ? "Generate image" : "Sent an image"),
+            timestamp: Date.now(),
+            images: persistedImageId ? [persistedImageId] : undefined
         };
-      }
-      return session;
-    }));
 
-    const currentSession = sessions.find(s => s.id === currentSessionId);
-    // For the context sent to API, we pass the ID. The service handles resolution.
-    const history = currentSession ? [...currentSession.messages, userMsg] : [userMsg];
+        const assistantMsgId = (Date.now() + 1).toString();
+        const assistantPlaceholder: Message = {
+            id: assistantMsgId,
+            role: Role.MODEL,
+            text: "",
+            timestamp: Date.now()
+        };
 
-    const assistantMsgId = (Date.now() + 1).toString();
-    let assistantText = "";
+        // 2. Update Session State (User + Placeholder)
+        // We do this in one go to avoid race conditions
+        let updatedHistory: Message[] = [];
+        
+        setSessions(prev => prev.map(session => {
+            if (session.id === currentSessionId) {
+                const title = session.messages.length === 0 
+                    ? (currentPrompt.slice(0, 30) || "New Chat") 
+                    : session.title;
+                
+                const newMessages = [...session.messages, userMsg, assistantPlaceholder];
+                updatedHistory = newMessages; // Capture for API call
+                
+                return {
+                    ...session,
+                    title,
+                    messages: newMessages,
+                    updatedAt: Date.now()
+                };
+            }
+            return session;
+        }));
 
-    setSessions(prev => prev.map(session => {
-        if (session.id === currentSessionId) {
-          return {
-            ...session,
-            messages: [...session.messages, {
-                id: assistantMsgId,
-                role: Role.MODEL,
-                text: "",
-                timestamp: Date.now(),
-            }]
-          };
-        }
-        return session;
-      }));
+        // 3. Call API
+        // Note: We use the history we just constructed (minus the empty placeholder)
+        const apiHistory = updatedHistory.slice(0, -1); 
 
-    await generateChatStream(
-        history,
-        currentPrompt,
-        persistedImageId || null, 
-        { imageMode: isImageMode, webSearch: isWebSearch },
-        (textChunk, grounding, generatedImageId) => {
-            assistantText = textChunk;
+        await generateChatStream(
+            apiHistory,
+            currentPrompt,
+            persistedImageId || null, 
+            effectiveModel, 
+            { imageMode: isImageMode, webSearch: isWebSearch },
+            (textChunk, grounding, generatedImageId) => {
+                setSessions(prev => prev.map(session => {
+                    if (session.id === currentSessionId) {
+                        return {
+                            ...session,
+                            messages: session.messages.map(m => {
+                                if (m.id === assistantMsgId) {
+                                    return {
+                                        ...m,
+                                        text: textChunk,
+                                        groundingSources: grounding,
+                                        generatedImage: generatedImageId 
+                                    };
+                                }
+                                return m;
+                            })
+                        };
+                    }
+                    return session;
+                }));
+            }
+        );
 
-            setSessions(prev => prev.map(session => {
-                if (session.id === currentSessionId) {
+    } catch (error: any) {
+        console.error("Send Message Error:", error);
+        alert(`Error: ${error.message || "Something went wrong"}`);
+        
+        // Mark the assistant message as error
+        setSessions(prev => prev.map(session => {
+            if (session.id === currentSessionId) {
+                const lastMsg = session.messages[session.messages.length - 1];
+                if (lastMsg.role === Role.MODEL && !lastMsg.text) {
                     return {
                         ...session,
-                        messages: session.messages.map(m => {
-                            if (m.id === assistantMsgId) {
-                                return {
-                                    ...m,
-                                    text: assistantText,
-                                    groundingSources: grounding,
-                                    generatedImage: generatedImageId // This is now an ID from the service
-                                };
-                            }
-                            return m;
-                        })
+                        messages: session.messages.map(m => 
+                            m.id === lastMsg.id ? { ...m, text: "Error: Failed to generate response.", isError: true } : m
+                        )
                     };
                 }
-                return session;
-            }));
-        }
-    );
+            }
+            return session;
+        }));
 
-    setIsLoading(false);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const currentSession = sessions.find(s => s.id === currentSessionId);
@@ -282,19 +305,39 @@ const App: React.FC = () => {
 
       <div className="flex-1 flex flex-col h-full relative w-full transition-all duration-300">
         
-        <div className="h-14 md:h-16 flex items-center justify-between px-4 sticky top-0 z-10 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md">
+        <div className="h-14 md:h-16 flex items-center justify-between px-4 sticky top-0 z-10 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800/50">
             <div className="flex items-center gap-2">
                 <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300">
                     <Menu size={20} />
                 </button>
-                <div className="flex items-center gap-2 px-2 group cursor-default">
-                     <span className={`text-lg font-semibold ${isImageMode ? 'text-purple-500' : 'text-gray-700 dark:text-gray-200'}`}>
-                        {isImageMode ? 'Nano Banana' : 'Gemini 3.0'}
-                    </span>
-                    <span className="text-gray-400 dark:text-gray-600">/</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[150px] md:max-w-[300px]">
-                        {currentSession?.title || 'New Chat'}
-                    </span>
+                
+                {/* Model Selector */}
+                <div className="relative">
+                    <select
+                        value={effectiveModel}
+                        onChange={(e) => {
+                            if (!isImageMode) setSelectedModel(e.target.value);
+                        }}
+                        disabled={isImageMode}
+                        className={`
+                            appearance-none bg-transparent font-semibold text-sm md:text-base
+                            pr-8 pl-2 py-1 rounded-md cursor-pointer focus:outline-none
+                            ${isImageMode 
+                                ? 'text-purple-600 dark:text-purple-400 opacity-90' 
+                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}
+                        `}
+                    >
+                        <option value={MODELS.GEMINI_3_PRO}>Gemini 3.0 Pro</option>
+                        <option value={MODELS.GEMINI_2_5_PRO}>Gemini 2.5 Pro</option>
+                        <option value={MODELS.GEMINI_2_5_FLASH}>Gemini 2.5 Flash</option>
+                        {isImageMode && (
+                            <option value={MODELS.GEMINI_IMAGE}>Nano Banana</option>
+                        )}
+                    </select>
+                    <ChevronDown 
+                        size={14} 
+                        className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${isImageMode ? 'text-purple-500' : 'text-gray-500'}`}
+                    />
                 </div>
             </div>
             
@@ -326,18 +369,11 @@ const App: React.FC = () => {
                             Hello, Human
                         </h3>
                         <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm md:text-base">
-                            I can help you reason through complex problems, code efficiently, or generate creative images using Nano Banana.
+                            I can help you solve complex problems with Gemini 3, or create amazing visuals with Flash Image.
                         </p>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
-                         <button 
-                            onClick={() => setInputValue("Explain quantum computing in simple terms")}
-                            className="p-4 text-left bg-gray-50 dark:bg-[#1e1f20] hover:bg-gray-100 dark:hover:bg-[#2e2f31] rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group"
-                         >
-                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-blue-500 transition-colors">Quantum Computing</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-500">Explain it like I'm five</span>
-                         </button>
+                    <div className="grid grid-cols-1 gap-3 w-full max-w-md">
                          <button 
                              onClick={() => {
                                  setIsImageMode(true);
@@ -346,7 +382,7 @@ const App: React.FC = () => {
                              className="p-4 text-left bg-gray-50 dark:bg-[#1e1f20] hover:bg-gray-100 dark:hover:bg-[#2e2f31] rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group"
                          >
                             <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-purple-500 transition-colors">Cyberpunk Art</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-500">Generate with Nano Banana</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-500">Generate with Gemini 2.5 Flash Image</span>
                          </button>
                     </div>
                 </div>

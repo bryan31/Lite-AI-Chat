@@ -28,8 +28,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
       setTimeout(() => setCopied(false), 2000);
   };
 
-  // Check if the model is "thinking" (loading state before first token)
-  const isLoading = !isUser && !message.text && !message.generatedImage && !message.isError;
+  const isTrulyLoading = !isUser && !message.text && !message.generatedImage && !message.isError;
 
   return (
     <div className="w-full py-6 md:py-8 animate-fade-in group">
@@ -73,8 +72,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
                 </div>
             )}
 
-            {/* Loading State (Three Dots) */}
-            {isLoading && (
+            {/* Loading State (Three Dots) - Only show if absolutely nothing is happening yet */}
+            {isTrulyLoading && (
                 <div className="py-2">
                     <LoadingDots />
                 </div>
@@ -132,7 +131,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
             )}
 
             {/* Footer Actions */}
-            {!isUser && !isLoading && (
+            {!isUser && !isTrulyLoading && (
                 <div className="flex items-center gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button 
                         onClick={handleCopy}
