@@ -3,14 +3,17 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
+
+// ES Module fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Attempt to load .env first
 dotenv.config();
 
 // If .env didn't provide the key, try loading .env.local explicitly
-// (Node.js dotenv doesn't load .env.local by default, unlike Vite)
-// We check for both API_KEY and GEMINI_API_KEY to ensure we don't miss the user's config
 if (!process.env.API_KEY && !process.env.GEMINI_API_KEY) {
   if (fs.existsSync('.env.local')) {
     console.log('Loading environment variables from .env.local');
@@ -19,7 +22,6 @@ if (!process.env.API_KEY && !process.env.GEMINI_API_KEY) {
 }
 
 // Normalize variable: Support GEMINI_API_KEY as an alias for API_KEY
-// This ensures compatibility with the README instructions
 if (!process.env.API_KEY && process.env.GEMINI_API_KEY) {
   process.env.API_KEY = process.env.GEMINI_API_KEY;
 }
@@ -28,27 +30,22 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-// Support specific CORS origin for production split deployment
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*', // In production, set CORS_ORIGIN to your frontend domain
+  origin: process.env.CORS_ORIGIN || '*',
   methods: ['POST', 'GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '50mb' })); // Allow large payloads for images
+app.use(express.json({ limit: '50mb' }));
 
 // Initialize Gemini API
-// The API key must be obtained exclusively from the environment variable process.env.API_KEY
 const apiKey = process.env.API_KEY;
-
 if (!apiKey) {
   console.warn("⚠️ WARNING: API_KEY is missing. Requests will fail.");
 }
-
-// Create client only if key exists to avoid immediate crash, handle error in route
 const ai = apiKey ? new GoogleGenAI({ apiKey: process.env.API_KEY }) : null;
 
-// Chat Endpoint
+// --- API Routes ---
 app.post('/api/chat', async (req, res) => {
   if (!ai) {
     return res.status(500).json({ error: "Server API Key not configured." });
@@ -58,21 +55,16 @@ app.post('/api/chat', async (req, res) => {
 
   try {
     if (config.imageMode) {
-      // --- Image Generation / Editing Mode ---
+      // Image Generation Logic
       const parts = [];
-
       if (imageContext) {
-        // Extract MIME type and data
         let mimeType = 'image/png';
         const mimeMatch = imageContext.match(/^data:(image\/\w+);base64,/);
         if (mimeMatch) mimeType = mimeMatch[1];
         const base64Data = imageContext.replace(/^data:image\/\w+;base64,/, "");
 
         parts.push({
-          inlineData: {
-            data: base64Data,
-            mimeType: mimeType,
-          }
+          inlineData: { data: base64Data, mimeType: mimeType }
         });
         parts.push({ text: `${message}\n\n(Generate the resulting image)` });
       } else {
@@ -95,7 +87,6 @@ app.post('/api/chat', async (req, res) => {
 
       let textOutput = "";
       let imageOutput = "";
-
       if (response.candidates && response.candidates[0].content.parts) {
         for (const part of response.candidates[0].content.parts) {
           if (part.inlineData) {
@@ -106,62 +97,57 @@ app.post('/api/chat', async (req, res) => {
         }
       }
 
-      // Send JSON response
       res.json({
         text: textOutput,
         image: imageOutput ? `data:image/png;base64,${imageOutput}` : null
       });
 
     } else {
-      // --- Text / Chat Mode ---
+      // Chat Logic
       const systemInstruction = "You are a helpful AI assistant.";
       const tools = [];
-      if (config.webSearch) {
-        tools.push({ googleSearch: {} });
-      }
+      if (config.webSearch) tools.push({ googleSearch: {} });
 
       const chat = ai.chats.create({
         model: model,
         history: history,
-        config: {
-          systemInstruction,
-          tools: tools.length > 0 ? tools : undefined,
-        },
+        config: { systemInstruction, tools: tools.length > 0 ? tools : undefined },
       });
 
       const result = await chat.sendMessageStream({ message: message });
 
-      // Set headers for streaming
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Transfer-Encoding', 'chunked');
 
       for await (const chunk of result) {
         const chunkData = {};
-        
-        const text = chunk.text;
-        if (text) chunkData.text = text;
-
+        if (chunk.text) chunkData.text = chunk.text;
         if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
-           // Normalize grounding chunks to simple object
            const rawChunks = chunk.candidates[0].groundingMetadata.groundingChunks;
-           chunkData.grounding = rawChunks
-             .filter(c => c.web)
-             .map(c => ({ title: c.web.title, uri: c.web.uri }));
+           chunkData.grounding = rawChunks.filter(c => c.web).map(c => ({ title: c.web.title, uri: c.web.uri }));
         }
-
-        // Send as newline-delimited JSON
         if (Object.keys(chunkData).length > 0) {
           res.write(JSON.stringify(chunkData) + '\n');
         }
       }
       res.end();
     }
-
   } catch (error) {
     console.error("API Error:", error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 });
+
+// --- Production Static Files Serving ---
+// This allows running the app on a single port in production
+if (process.env.NODE_ENV === 'production' || fs.existsSync(path.join(__dirname, 'dist'))) {
+  app.use(express.static(path.join(__dirname, 'dist')));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
