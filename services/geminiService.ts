@@ -1,6 +1,29 @@
-
 import { Message, Role, GroundingSource, MODELS } from "../types";
 import { saveImageToDB, getImageFromDB } from "./imageDb";
+
+// Determine API Endpoint
+// In dev: uses Vite proxy (relative path)
+// In prod: uses VITE_API_BASE_URL if set, otherwise assumes same origin
+const meta = import.meta as any;
+const API_BASE_URL = meta.env?.VITE_API_BASE_URL 
+  ? meta.env.VITE_API_BASE_URL.replace(/\/$/, '') // Remove trailing slash
+  : '/api'; 
+
+// Helper to handle full URL construction
+const getApiUrl = (endpoint: string) => {
+  if (API_BASE_URL.startsWith('http')) {
+    // If absolute URL, append endpoint (removing /api from endpoint if base already has it to avoid duplicate)
+    // But our convention is base='http://.../api' or base='http://...'
+    // Let's keep it simple: Base + Endpoint.
+    // If base is "http://localhost:3001", result is "http://localhost:3001/chat" (requires backend to mount at root or adjust)
+    
+    // To support the server.js structure which is mounted at /api/chat:
+    // If VITE_API_BASE_URL is "http://myserver.com/api", result is "http://myserver.com/api/chat"
+    return `${API_BASE_URL}${endpoint.replace(/^\/api/, '')}`;
+  }
+  // Relative path (proxy)
+  return endpoint;
+};
 
 export const generateChatStream = async (
   history: Message[],
@@ -37,7 +60,8 @@ export const generateChatStream = async (
   });
 
   try {
-    const response = await fetch('/api/chat', {
+    const url = getApiUrl('/api/chat');
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

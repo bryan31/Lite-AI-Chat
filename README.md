@@ -2,217 +2,139 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Gemini Pro Chat - AI 聊天应用
+# Gemini Pro Chat
 
-基于 Google Gemini 3.0 Pro 和 Nano Banana 模型的强大 AI 聊天界面，支持文本对话、图像生成和网络搜索增强功能。
+一个功能强大的全栈 AI 聊天应用，集成了 Google Gemini 3.0 Pro 和图像生成模型。
 
-在 AI Studio 中查看: https://ai.studio/apps/temp/2
+## 🌟 项目架构
 
-## ✨ 核心功能
+这是一个 **前后端分离** 的项目：
+*   **前端 (Frontend)**: React + Vite (运行在浏览器)
+*   **后端 (Backend)**: Node.js + Express (运行在服务器)
 
-### 🤖 AI 对话
-- 基于 **Gemini 3.0 Pro** 模型的智能文本对话
-- **流式响应**：实时显示 AI 生成的内容
-- 支持多轮对话，保持上下文连贯性
-- Markdown 格式渲染（代码高亮、表格、列表等）
-
-### 🎨 图像生成与编辑
-- 使用 **Nano Banana** (gemini-2.5-flash-image) 模型生成图像
-- 支持上传图像进行编辑和修改
-- Base64 格式图像处理和展示
-- 性能优化：使用 Blob URL 避免大型数据阻塞
-
-### 🔍 网络搜索增强
-- 集成 Google Search 工具 (Web Grounding)
-- 显示搜索来源和引用链接
-- 提供可点击的来源卡片
-
-### 💾 会话管理
-- 创建和管理多个对话会话
-- 查看历史对话列表
-- 一键删除会话
-- 自动保存到浏览器本地存储
-- 会话标题自动生成
-
-### 🎨 用户体验
-- 🌓 深色/浅色主题切换
-- 📱 响应式设计（移动端和桌面端适配）
-- ⚡ 自动滚动到最新消息
-- 📝 输入框自适应高度
-- ⏳ 优雅的加载动画
-- 📋 一键复制消息
-- 🖼️ 图像附件预览
-
-## 🛠️ 技术栈
-
-- **前端框架**: React 19.2.0
-- **开发语言**: TypeScript 5.8.2
-- **构建工具**: Vite 6.2.0
-- **样式方案**: Tailwind CSS (CDN)
-- **AI 引擎**: Google Gemini AI (@google/genai 1.30.0)
-- **Markdown**: react-markdown + remark-gfm
-- **代码高亮**: rehype-highlight + highlight.js
-- **图标库**: lucide-react
-
-## 📦 快速开始
-
-### 前置要求
-
-- Node.js (建议 v18+)
-- Gemini API 密钥 (从 [Google AI Studio](https://aistudio.google.com/app/apikey) 获取)
-
-### 安装步骤
-
-1. **克隆项目**
-```bash
-git clone <repository-url>
-cd gemini-pro-chat
-```
-
-2. **安装依赖**
-```bash
-npm install
-```
-
-3. **配置 API 密钥**
-
-编辑 `.env.local` 文件，将 `PLACEHOLDER_API_KEY` 替换为你的真实 Gemini API 密钥：
-
-```env
-GEMINI_API_KEY=你的真实API密钥
-```
-
-4. **启动开发服务器**
-```bash
-npm run dev
-```
-
-应用将在 http://localhost:3000 启动
-
-### 使用脚本启动（推荐）
-
-**启动应用**：
-```bash
-./run.sh
-```
-
-**停止应用**：
-```bash
-./stop.sh
-```
-
-## 📜 可用命令
-
-```bash
-# 启动开发服务器
-npm run dev
-
-# 构建生产版本
-npm run build
-
-# 预览生产构建
-npm run preview
-```
-
-## 🚀 部署
-
-本项目是纯前端应用，可以部署到以下平台：
-
-- **Vercel** - 推荐，原生支持 Vite
-- **Netlify** - 静态网站托管
-- **GitHub Pages** - 免费托管
-- **AI Studio** - Google AI Studio 平台
-
-### 部署注意事项
-
-1. 确保在部署环境中配置 `GEMINI_API_KEY` 环境变量
-2. API 密钥会在构建时注入到客户端代码中
-3. 建议使用环境变量管理密钥，不要硬编码
-
-## 📂 项目结构
-
-```
-gemini-pro-chat/
-├── .env.local              # 环境变量配置
-├── package.json            # 项目依赖和脚本
-├── tsconfig.json           # TypeScript 配置
-├── vite.config.ts          # Vite 构建配置
-├── index.html              # HTML 入口文件
-├── index.tsx               # React 应用入口
-├── App.tsx                 # 主应用组件
-├── types.ts                # TypeScript 类型定义
-├── components/             # React 组件
-│   ├── MessageItem.tsx     # 消息项组件
-│   ├── MarkdownRenderer.tsx # Markdown 渲染组件
-│   └── Sidebar.tsx         # 侧边栏组件
-└── services/               # 服务层
-    └── geminiService.ts    # Gemini API 服务
-```
-
-## 🔑 环境变量
-
-| 变量名 | 说明 | 必需 |
-|--------|------|------|
-| `GEMINI_API_KEY` | Google Gemini API 密钥 | 是 |
-
-## 💡 使用指南
-
-### 文本对话
-1. 在输入框中输入问题或消息
-2. 按 Enter 发送（Shift+Enter 换行）
-3. AI 将实时生成回复
-
-### 图像生成
-1. 在消息中描述你想要的图像
-2. AI 会自动判断是否需要生成图像
-3. 生成的图像会显示在对话中
-
-### 图像编辑
-1. 点击附件按钮上传图像
-2. 在消息中描述你想要的修改
-3. AI 将基于原图生成新的图像
-
-### 网络搜索
-1. 询问需要最新信息的问题
-2. AI 会自动启用 Web Grounding
-3. 查看来源卡片了解信息出处
-
-### 会话管理
-- 点击侧边栏的"新建对话"创建会话
-- 点击历史会话切换对话
-- 点击垃圾桶图标删除会话
-
-## 📝 数据存储
-
-- 所有对话数据存储在浏览器的 **LocalStorage**
-- 主题偏好存储在 `gemini-pro-theme`
-- 会话历史存储在 `gemini-pro-history`
-- 无需服务器，数据完全本地化
-- 存储超限时自动保存精简版（移除图像数据）
-
-## 🔧 性能优化
-
-- ✅ Blob URL 替代 Base64，避免大型图像阻塞 UI
-- ✅ 异步图像处理，使用 fetch 和 URL.createObjectURL
-- ✅ 流式响应，实时显示 AI 生成内容
-- ✅ 自适应文本框，根据内容自动调整高度
-- ✅ LocalStorage 配额管理，优雅降级
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-本项目使用 MIT 许可证
-
-## 🔗 相关链接
-
-- [Google AI Studio](https://aistudio.google.com/)
-- [Gemini API 文档](https://ai.google.dev/docs)
-- [React 文档](https://react.dev/)
-- [Vite 文档](https://vitejs.dev/)
+后端负责保护 API Key 并与 Google Gemini 服务器通信，前端负责 UI 展示。
 
 ---
 
-💻 使用 [Google Gemini AI](https://ai.google.dev/) 驱动
+## 🛠️ 1. 本地开发环境 (Local Development)
+
+最简单的启动方式，适合开发和测试。
+
+### 步骤
+1.  **安装依赖**
+    ```bash
+    npm install
+    ```
+
+2.  **配置环境变量**
+    在项目根目录创建一个 `.env.local` 文件：
+    ```env
+    # Gemini API Key (必需)
+    GEMINI_API_KEY=你的真实API密钥
+    ```
+    *注意：后端代码已更新，会自动尝试读取 `.env.local` 文件。*
+
+3.  **启动应用**
+    ```bash
+    npm run dev
+    ```
+    此命令会同时启动后端服务器 (Port 3001) 和前端开发服务器 (Port 3000)。前端通过 Vite 代理 (`vite.config.ts`) 将请求转发给后端。
+
+4.  **访问**
+    打开 http://localhost:3000
+
+---
+
+## 🚀 2. 生产环境部署 (Production Deployment)
+
+在正式环境中，我们建议显式地设置环境变量，而不是依赖 `.env` 文件。
+
+### 方案 A：前后端分离部署 (推荐)
+
+适用于：前端托管在 Vercel/Netlify/Nginx，后端托管在 Railway/Render/云服务器。
+
+#### 后端部署 (Server)
+1.  将代码上传到你的后端服务器。
+2.  **环境变量配置**：在服务器的环境变量设置界面（或 Docker compose）中设置：
+    *   `GEMINI_API_KEY`: 你的 API Key
+    *   `PORT`: (可选) 后端运行端口，默认 3001
+    *   `CORS_ORIGIN`: 你的前端域名 (例如: `https://my-chat-app.com`)，用于解决跨域问题。如果不设置，默认为 `*` (允许所有)。
+3.  **启动命令**：
+    ```bash
+    node server.js
+    ```
+
+#### 前端部署 (Client)
+1.  **环境变量配置**：在构建前端**之前**，需要设置环境变量来告诉前端后端在哪里。
+    *   `VITE_API_BASE_URL`: 后端的完整地址 + `/api`。
+    *   例如，如果后端部署在 `https://api.myserver.com`，则设置为 `https://api.myserver.com/api`。
+2.  **构建并部署**：
+    ```bash
+    # 在构建机上执行
+    export VITE_API_BASE_URL=https://api.myserver.com/api
+    npm run build
+    ```
+    将生成的 `dist/` 文件夹部署到静态托管服务 (Vercel, Netlify, Nginx 等)。
+
+---
+
+### 方案 B：单体部署 (Nginx 反向代理)
+
+适用于：你有一台 Linux 服务器 (Ubuntu/CentOS)，想把前后端放在一起。
+
+1.  **启动后端**
+    使用 PM2 或 Docker 启动 `server.js`，监听 3001 端口。确保设置了 `GEMINI_API_KEY` 环境变量。
+
+2.  **构建前端**
+    ```bash
+    npm run build
+    ```
+    这会生成 `dist` 目录。
+
+3.  **配置 Nginx**
+    配置 Nginx 既提供静态文件，又代理 API 请求。
+
+    ```nginx
+    server {
+        listen 80;
+        server_name your-domain.com;
+
+        # 1. 前端静态文件
+        location / {
+            root /path/to/your/project/dist;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+
+        # 2. 后端 API 代理
+        location /api/ {
+            proxy_pass http://localhost:3001/api/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+    ```
+
+---
+
+## 📂 环境变量参考
+
+| 变量名 | 作用域 | 说明 |
+|--------|--------|------|
+| `GEMINI_API_KEY` | 后端 | **[必需]** Google Gemini API 密钥 |
+| `PORT` | 后端 | 后端监听端口 (默认: 3001) |
+| `CORS_ORIGIN` | 后端 | 允许跨域的前端域名 (生产环境建议设置) |
+| `VITE_API_BASE_URL` | 前端 (构建时) | 指定后端的 API 地址 (例如 `https://api.example.com/api`)。如果未设置，前端默认请求相对路径 `/api`。 |
+
+## 🔧 常见问题
+
+**Q: 为什么我在服务器上运行时报错 `GEMINI_API_KEY is missing`?**
+A: Node.js 在生产模式下通常不读取 `.env.local`。
+1. 确保你在服务器的控制面板中添加了环境变量。
+2. 或者在服务器目录下创建一个名为 `.env` 的文件（注意不是 .env.local），Node.js 的 `dotenv` 默认会读取它。
+
+**Q: 前端部署后无法连接后端，提示 404?**
+A: 检查 `VITE_API_BASE_URL` 是否正确设置。如果未设置，前端会请求 `https://前端域名/api/chat`。如果你是分离部署，这肯定会 404，因为后端在另一个域名。
+
+**Q: 出现 CORS (跨域) 错误?**
+A: 确保后端设置了 `CORS_ORIGIN` 环境变量为你的前端域名，或者暂不设置该变量（默认为允许所有）。

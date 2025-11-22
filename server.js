@@ -1,26 +1,52 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 
+// Attempt to load .env first
 dotenv.config();
 
+// If .env didn't provide the key, try loading .env.local explicitly
+// (Node.js dotenv doesn't load .env.local by default, unlike Vite)
+if (!process.env.API_KEY) {
+  if (fs.existsSync('.env.local')) {
+    console.log('Loading environment variables from .env.local');
+    dotenv.config({ path: '.env.local' });
+  }
+}
+
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+// Support specific CORS origin for production split deployment
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || '*', // In production, set CORS_ORIGIN to your frontend domain
+  methods: ['POST', 'GET', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' })); // Allow large payloads for images
 
 // Initialize Gemini API
-const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+// The API key must be obtained exclusively from the environment variable process.env.API_KEY
+const apiKey = process.env.API_KEY;
+
 if (!apiKey) {
-  console.error("Error: API_KEY or GEMINI_API_KEY is missing in environment variables.");
+  console.warn("⚠️ WARNING: API_KEY is missing. Requests will fail.");
 }
-const ai = new GoogleGenAI({ apiKey: apiKey });
+
+// Create client only if key exists to avoid immediate crash, handle error in route
+const ai = apiKey ? new GoogleGenAI({ apiKey: apiKey }) : null;
 
 // Chat Endpoint
 app.post('/api/chat', async (req, res) => {
+  if (!ai) {
+    return res.status(500).json({ error: "Server API Key not configured." });
+  }
+
   const { history, message, imageContext, model, config } = req.body;
 
   try {
@@ -131,5 +157,5 @@ app.post('/api/chat', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
+  console.log(`Backend server running on port ${PORT}`);
 });
