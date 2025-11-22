@@ -174,24 +174,36 @@ const App: React.FC = () => {
   const sendMessage = async () => {
     if ((!inputValue.trim() && !attachedImage) || isLoading) return;
     
-    // Ensure we have a valid session
-    let activeSessionId = currentSessionId;
-    if (!activeSessionId) {
-        // Fallback: try to find the first session or create new
+    // 1. Determine Session ID and History Context
+    let activeSessionIdToUse = currentSessionId;
+    let historyForApi: Message[] = [];
+
+    // Handle "New Chat" or "No Session Selected" case explicitly before async ops
+    if (!activeSessionIdToUse) {
         if (sessions.length > 0) {
-            activeSessionId = sessions[0].id;
-            setCurrentSessionId(activeSessionId);
+            // Fallback to first available session
+            activeSessionIdToUse = sessions[0].id;
+            historyForApi = sessions[0].messages;
+            setCurrentSessionId(activeSessionIdToUse);
         } else {
+            // Create a brand new session
+            const newSessionId = Date.now().toString();
             const newSession: ChatSession = {
-                id: Date.now().toString(),
+                id: newSessionId,
                 title: 'New Chat',
                 updatedAt: Date.now(),
                 messages: []
             };
+            // We set state here, but we also need to use the local object for immediate logic
             setSessions([newSession]);
-            activeSessionId = newSession.id;
-            setCurrentSessionId(activeSessionId);
+            activeSessionIdToUse = newSessionId;
+            historyForApi = []; // New session has no history
+            setCurrentSessionId(activeSessionIdToUse);
         }
+    } else {
+        // Retrieve existing history from state
+        const session = sessions.find(s => s.id === activeSessionIdToUse);
+        historyForApi = session ? session.messages : [];
     }
 
     const currentPrompt = inputValue;
@@ -201,6 +213,9 @@ const App: React.FC = () => {
     setInputValue('');
     setAttachedImage(null);
     setIsLoading(true);
+
+    // Define ID here so it's available in try and catch blocks
+    const assistantMsgId = (Date.now() + 1).toString();
 
     try {
         let persistedImageId: string | undefined = undefined;
@@ -225,7 +240,6 @@ const App: React.FC = () => {
             images: persistedImageId ? [persistedImageId] : undefined
         };
 
-        const assistantMsgId = (Date.now() + 1).toString();
         const assistantPlaceholder: Message = {
             id: assistantMsgId,
             role: Role.MODEL,
@@ -234,22 +248,18 @@ const App: React.FC = () => {
         };
 
         // 2. Update Session State (User + Placeholder)
-        // We do this in one go to avoid race conditions
-        let updatedHistory: Message[] = [];
-        
+        // We use the functional update to ensure we append to the latest state, 
+        // especially if we just created a new session in the block above.
         setSessions(prev => prev.map(session => {
-            if (session.id === activeSessionId) {
+            if (session.id === activeSessionIdToUse) {
                 const title = session.messages.length === 0 
                     ? (currentPrompt.slice(0, 30) || "New Chat") 
                     : session.title;
                 
-                const newMessages = [...session.messages, userMsg, assistantPlaceholder];
-                updatedHistory = newMessages; // Capture for API call
-                
                 return {
                     ...session,
                     title,
-                    messages: newMessages,
+                    messages: [...session.messages, userMsg, assistantPlaceholder],
                     updatedAt: Date.now()
                 };
             }
@@ -257,18 +267,17 @@ const App: React.FC = () => {
         }));
 
         // 3. Call API
-        // Note: We use the history we just constructed (minus the empty placeholder)
-        const apiHistory = updatedHistory.slice(0, -1); 
-
+        // We pass 'historyForApi' (the history BEFORE this new message).
+        // The backend adds the 'message' (currentPrompt) to the context, so we shouldn't double-send it in history.
         await generateChatStream(
-            apiHistory,
+            historyForApi,
             currentPrompt,
             persistedImageId || null, 
             effectiveModel, 
             { imageMode: isImageMode, webSearch: isWebSearch },
             (textChunk, grounding, generatedImageId) => {
                 setSessions(prev => prev.map(session => {
-                    if (session.id === activeSessionId) {
+                    if (session.id === activeSessionIdToUse) {
                         return {
                             ...session,
                             messages: session.messages.map(m => {
@@ -293,9 +302,10 @@ const App: React.FC = () => {
         console.error("Send Message Error:", error);
         // Don't alert, just show in chat
         setSessions(prev => prev.map(session => {
-            if (session.id === activeSessionId) {
+            if (session.id === activeSessionIdToUse) {
                 const lastMsg = session.messages[session.messages.length - 1];
-                if (lastMsg.role === Role.MODEL && !lastMsg.text) {
+                // Ensure we are updating the placeholder we just created
+                if (lastMsg.role === Role.MODEL && lastMsg.id === assistantMsgId) {
                     return {
                         ...session,
                         messages: session.messages.map(m => 
