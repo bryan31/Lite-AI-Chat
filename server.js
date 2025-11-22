@@ -139,14 +139,19 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // --- Production Static Files Serving ---
-// This allows running the app on a single port in production
-if (process.env.NODE_ENV === 'production' || fs.existsSync(path.join(__dirname, 'dist'))) {
+// This allows running the app on a single port in production.
+// We ONLY serve static files if explicitly in production mode.
+// This prevents the backend from serving the frontend on port 3001 during development
+// so you can clearly separate Vite (3000) and API (3001).
+if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'dist')));
   
   // Handle React routing, return all requests to React app
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
+} else {
+  console.log('ℹ️  Development Mode: Static file serving disabled on backend. Use Vite on port 3000.');
 }
 
 app.listen(PORT, () => {
