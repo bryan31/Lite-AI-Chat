@@ -10,11 +10,18 @@ dotenv.config();
 
 // If .env didn't provide the key, try loading .env.local explicitly
 // (Node.js dotenv doesn't load .env.local by default, unlike Vite)
-if (!process.env.API_KEY) {
+// We check for both API_KEY and GEMINI_API_KEY to ensure we don't miss the user's config
+if (!process.env.API_KEY && !process.env.GEMINI_API_KEY) {
   if (fs.existsSync('.env.local')) {
     console.log('Loading environment variables from .env.local');
     dotenv.config({ path: '.env.local' });
   }
+}
+
+// Normalize variable: Support GEMINI_API_KEY as an alias for API_KEY
+// This ensures compatibility with the README instructions
+if (!process.env.API_KEY && process.env.GEMINI_API_KEY) {
+  process.env.API_KEY = process.env.GEMINI_API_KEY;
 }
 
 const app = express();
@@ -39,7 +46,7 @@ if (!apiKey) {
 }
 
 // Create client only if key exists to avoid immediate crash, handle error in route
-const ai = apiKey ? new GoogleGenAI({ apiKey: apiKey }) : null;
+const ai = apiKey ? new GoogleGenAI({ apiKey: process.env.API_KEY }) : null;
 
 // Chat Endpoint
 app.post('/api/chat', async (req, res) => {
