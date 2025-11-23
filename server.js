@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -51,13 +52,16 @@ app.post('/api/chat', async (req, res) => {
     return res.status(500).json({ error: "Server API Key not configured." });
   }
 
-  const { history, message, imageContext, model, config } = req.body;
+  const { history, message, images, model, config } = req.body;
 
   try {
     if (config.imageMode) {
       // Image Generation Logic
       const parts = [];
-      if (imageContext) {
+      
+      // Handle images for editing/referencing (taking the first one for standard Nano Banana behavior)
+      if (images && images.length > 0) {
+        const imageContext = images[0];
         let mimeType = 'image/png';
         const mimeMatch = imageContext.match(/^data:(image\/\w+);base64,/);
         if (mimeMatch) mimeType = mimeMatch[1];
@@ -114,7 +118,31 @@ app.post('/api/chat', async (req, res) => {
         config: { systemInstruction, tools: tools.length > 0 ? tools : undefined },
       });
 
-      const result = await chat.sendMessageStream({ message: message });
+      // Construct message parts (Text + Images)
+      let messagePayload = message; 
+
+      if (images && images.length > 0) {
+        const parts = [];
+        parts.push({ text: message });
+        
+        for (const img of images) {
+          let mimeType = 'image/png';
+          const mimeMatch = img.match(/^data:(image\/\w+);base64,/);
+          if (mimeMatch) mimeType = mimeMatch[1];
+          const base64Data = img.replace(/^data:image\/\w+;base64,/, "");
+          
+          parts.push({
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
+            }
+          });
+        }
+        // When using parts array for message
+        messagePayload = parts;
+      }
+
+      const result = await chat.sendMessageStream({ message: messagePayload });
 
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Transfer-Encoding', 'chunked');

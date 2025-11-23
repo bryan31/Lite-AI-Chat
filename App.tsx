@@ -9,7 +9,7 @@ import { ChatSession, Message, Role, Theme, MODELS } from './types';
 import { ImageWithLoader } from './components/ImageWithLoader';
 import { 
   Send, 
-  PanelLeft, // Changed from Menu to PanelLeft for better semantics
+  PanelLeft, 
   Image as ImageIcon, 
   Globe, 
   Moon, 
@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Code2,
   Plane,
-  PenTool
+  PenTool,
+  X as XIcon
 } from 'lucide-react';
 
 // Local Storage Keys
@@ -46,8 +47,8 @@ const App: React.FC = () => {
   // Effective Model Calculation
   const effectiveModel = isImageMode ? MODELS.GEMINI_IMAGE : selectedModel;
 
-  // Attachments
-  const [attachedImage, setAttachedImage] = useState<string | null>(null); 
+  // Attachments (Now supports multiple)
+  const [attachedImages, setAttachedImages] = useState<string[]>([]); 
   
   // Image Viewer State
   const [viewImage, setViewImage] = useState<string | null>(null);
@@ -135,7 +136,7 @@ const App: React.FC = () => {
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);
     setIsImageMode(false);
-    setAttachedImage(null);
+    setAttachedImages([]);
     setInputValue('');
     if (textareaRef.current) textareaRef.current.focus();
     // On mobile, close sidebar after creating new chat
@@ -165,18 +166,33 @@ const App: React.FC = () => {
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setAttachedImage(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-    }
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const fileReaders: Promise<string>[] = [];
+    
+    Array.from(files).forEach(file => {
+        const p = new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+        });
+        fileReaders.push(p);
+    });
+
+    Promise.all(fileReaders).then(newImages => {
+        setAttachedImages(prev => [...prev, ...newImages]);
+        // Reset input to allow selecting same file again
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    });
+  };
+
+  const removeAttachedImage = (index: number) => {
+      setAttachedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleImageEditRequest = (imageId: string) => {
-      setAttachedImage(imageId);
+      setAttachedImages([imageId]);
       setIsImageMode(true);
       if (textareaRef.current) textareaRef.current.focus();
       setTimeout(() => {
@@ -185,7 +201,7 @@ const App: React.FC = () => {
   };
 
   const sendMessage = async () => {
-    if ((!inputValue.trim() && !attachedImage) || isLoading) return;
+    if ((!inputValue.trim() && attachedImages.length === 0) || isLoading) return;
     
     // 1. Determine Session ID and History Context
     let activeSessionIdToUse = currentSessionId;
@@ -220,25 +236,28 @@ const App: React.FC = () => {
     }
 
     const currentPrompt = inputValue;
-    const tempImage = attachedImage; 
+    const tempImages = [...attachedImages]; 
     
     // Clear UI immediately
     setInputValue('');
-    setAttachedImage(null);
+    setAttachedImages([]);
     setIsLoading(true);
 
     // Define ID here so it's available in try and catch blocks
     const assistantMsgId = (Date.now() + 1).toString();
 
     try {
-        let persistedImageId: string | undefined = undefined;
+        const persistedImageIds: string[] = [];
         
-        // 1. Persist Image if exists
-        if (tempImage) {
+        // 1. Persist Images if exists
+        if (tempImages.length > 0) {
             try {
-                 persistedImageId = await saveImageToDB(tempImage);
+                 for (const img of tempImages) {
+                    const id = await saveImageToDB(img);
+                    persistedImageIds.push(id);
+                 }
             } catch (e) {
-                console.error("Failed to save input image to DB", e);
+                console.error("Failed to save input images to DB", e);
                 alert("处理图片失败，请重试。");
                 setIsLoading(false);
                 return;
@@ -248,9 +267,9 @@ const App: React.FC = () => {
         const userMsg: Message = {
             id: Date.now().toString(),
             role: Role.USER,
-            text: currentPrompt || (isImageMode ? "生成图片" : "发送了一张图片"),
+            text: currentPrompt || (isImageMode ? "生成图片" : (tempImages.length > 0 ? "发送了图片" : "发送内容")),
             timestamp: Date.now(),
-            images: persistedImageId ? [persistedImageId] : undefined
+            images: persistedImageIds.length > 0 ? persistedImageIds : undefined
         };
 
         const assistantPlaceholder: Message = {
@@ -261,8 +280,6 @@ const App: React.FC = () => {
         };
 
         // 2. Update Session State (User + Placeholder)
-        // We use the functional update to ensure we append to the latest state, 
-        // especially if we just created a new session in the block above.
         setSessions(prev => prev.map(session => {
             if (session.id === activeSessionIdToUse) {
                 const title = session.messages.length === 0 
@@ -280,12 +297,10 @@ const App: React.FC = () => {
         }));
 
         // 3. Call API
-        // We pass 'historyForApi' (the history BEFORE this new message).
-        // The backend adds the 'message' (currentPrompt) to the context, so we shouldn't double-send it in history.
         await generateChatStream(
             historyForApi,
             currentPrompt,
-            persistedImageId || null, 
+            persistedImageIds, 
             effectiveModel, 
             { imageMode: isImageMode, webSearch: isWebSearch },
             (textChunk, grounding, generatedImageId) => {
@@ -517,13 +532,23 @@ const App: React.FC = () => {
                     ${isImageMode ? 'ring-1 ring-purple-500/20' : ''}
                 `}>
                     
-                    {attachedImage && (
-                        <div className="px-4 pt-4">
-                            <ImageWithLoader 
-                                src={attachedImage} 
-                                onRemove={() => setAttachedImage(null)}
-                                className="h-16 w-16 object-cover rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"
-                            />
+                    {/* Attached Images List */}
+                    {attachedImages.length > 0 && (
+                        <div className="px-4 pt-4 flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+                            {attachedImages.map((img, idx) => (
+                                <div key={idx} className="relative flex-shrink-0 group/preview">
+                                    <ImageWithLoader 
+                                        src={img} 
+                                        className="h-16 w-16 object-cover rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"
+                                    />
+                                    <button 
+                                        onClick={() => removeAttachedImage(idx)}
+                                        className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full p-1 opacity-0 group-hover/preview:opacity-100 transition-opacity shadow-sm"
+                                    >
+                                        <XIcon size={12} />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     )}
 
@@ -548,7 +573,7 @@ const App: React.FC = () => {
                             }
                         }}
                         placeholder={isImageMode 
-                            ? (attachedImage ? "描述如何修改这张图片..." : "描述你想生成的图片...") 
+                            ? (attachedImages.length > 0 ? "描述如何修改这张图片..." : "描述你想生成的图片...") 
                             : "问点什么..."}
                         className="w-full bg-transparent border-0 outline-none focus:ring-0 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none py-4 px-6 min-h-[56px] max-h-64"
                         rows={1}
@@ -569,6 +594,7 @@ const App: React.FC = () => {
                                 ref={fileInputRef}
                                 className="hidden" 
                                 accept="image/*"
+                                multiple
                                 onChange={handleFileUpload}
                             />
                             
@@ -592,10 +618,10 @@ const App: React.FC = () => {
 
                         <button 
                             onClick={sendMessage}
-                            disabled={(!inputValue.trim() && !attachedImage) || isLoading}
+                            disabled={(!inputValue.trim() && attachedImages.length === 0) || isLoading}
                             className={`
                                 p-2 rounded-full flex items-center justify-center transition-all duration-200
-                                ${inputValue.trim() || attachedImage
+                                ${inputValue.trim() || attachedImages.length > 0
                                     ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:scale-105 shadow-md' 
                                     : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}
                             `}

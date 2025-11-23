@@ -1,3 +1,4 @@
+
 import { Message, Role, GroundingSource, MODELS } from "../types";
 import { saveImageToDB, getImageFromDB } from "./imageDb";
 
@@ -28,22 +29,24 @@ const getApiUrl = (endpoint: string) => {
 export const generateChatStream = async (
   history: Message[],
   currentPrompt: string,
-  imageContext: string | null, // Can be Base64 OR an ID (img_...)
+  imageContexts: string[], // List of Base64 strings OR IDs (img_...)
   selectedModel: string, // Dynamic model selection
   config: { imageMode: boolean; webSearch: boolean },
   onChunk: (text: string, grounding?: GroundingSource[], generatedImageId?: string) => void
 ) => {
   
-  // Resolve imageContext: If it is an ID, fetch the real base64 data
-  let realImageBase64 = imageContext;
-  if (imageContext && imageContext.startsWith('img_')) {
-      try {
-          const fetched = await getImageFromDB(imageContext);
-          if (fetched) realImageBase64 = fetched;
-      } catch (e) {
-          console.error("Error fetching image from DB:", e);
+  // Resolve imageContexts: If they are IDs, fetch the real base64 data
+  const realImages = await Promise.all(imageContexts.map(async (ctx) => {
+      if (ctx && ctx.startsWith('img_')) {
+          try {
+              const fetched = await getImageFromDB(ctx);
+              if (fetched) return fetched;
+          } catch (e) {
+              console.error("Error fetching image from DB:", e);
+          }
       }
-  }
+      return ctx;
+  }));
 
   // Prepare history for API (remove internal IDs, etc.)
   const apiHistory = history.map(msg => {
@@ -67,7 +70,7 @@ export const generateChatStream = async (
       body: JSON.stringify({
         history: apiHistory,
         message: currentPrompt,
-        imageContext: realImageBase64,
+        images: realImages, // Pass array of images
         model: selectedModel,
         config
       })
