@@ -1,7 +1,7 @@
 [**🇺🇸 English**](README.md) | [**🇨🇳 中文文档**](README_zh.md)
 </div>
 
-# Gemini Pro Chat
+# Lite Ai Chat
 
 **一个功能极其强大的全栈 AI 助手，无缝集成了 Google 最新的 Gemini 3.0 Pro 推理模型与 Nano Banana 视觉生成模型。**
 
