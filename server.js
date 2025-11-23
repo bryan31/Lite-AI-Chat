@@ -59,17 +59,20 @@ app.post('/api/chat', async (req, res) => {
       // Image Generation Logic
       const parts = [];
       
-      // Handle images for editing/referencing (taking the first one for standard Nano Banana behavior)
+      // Handle images for editing/referencing
       if (images && images.length > 0) {
-        const imageContext = images[0];
-        let mimeType = 'image/png';
-        const mimeMatch = imageContext.match(/^data:(image\/\w+);base64,/);
-        if (mimeMatch) mimeType = mimeMatch[1];
-        const base64Data = imageContext.replace(/^data:image\/\w+;base64,/, "");
+        // Iterate over all provided images
+        for (const img of images) {
+          let mimeType = 'image/png';
+          const mimeMatch = img.match(/^data:(image\/\w+);base64,/);
+          if (mimeMatch) mimeType = mimeMatch[1];
+          const base64Data = img.replace(/^data:image\/\w+;base64,/, "");
 
-        parts.push({
-          inlineData: { data: base64Data, mimeType: mimeType }
-        });
+          parts.push({
+            inlineData: { data: base64Data, mimeType: mimeType }
+          });
+        }
+        
         parts.push({ text: `${message}\n\n(Generate the resulting image)` });
       } else {
         parts.push({ text: message });
