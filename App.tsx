@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { MessageItem } from './components/MessageItem';
+import { ImageViewer } from './components/ImageViewer';
 import { generateChatStream } from './services/geminiService';
 import { saveImageToDB } from './services/imageDb';
 import { ChatSession, Message, Role, Theme, MODELS } from './types';
@@ -47,6 +48,9 @@ const App: React.FC = () => {
 
   // Attachments
   const [attachedImage, setAttachedImage] = useState<string | null>(null); 
+  
+  // Image Viewer State
+  const [viewImage, setViewImage] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -335,6 +339,14 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 dark:selection:bg-blue-900/30">
       
+      {/* Lightbox / Image Viewer */}
+      {viewImage && (
+        <ImageViewer 
+            src={viewImage} 
+            onClose={() => setViewImage(null)} 
+        />
+      )}
+
       <Sidebar 
         isOpen={sidebarOpen}
         toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -484,6 +496,7 @@ const App: React.FC = () => {
                             key={msg.id} 
                             message={msg} 
                             onEditImage={handleImageEditRequest}
+                            onImageClick={(src) => setViewImage(src)}
                         />
                     ))}
                     <div ref={messagesEndRef} className="h-4" />

@@ -7,9 +7,10 @@ interface ImageWithLoaderProps {
   alt?: string;
   className?: string;
   onRemove?: () => void;
+  onClick?: () => void;
 }
 
-export const ImageWithLoader: React.FC<ImageWithLoaderProps> = ({ src, alt, className, onRemove }) => {
+export const ImageWithLoader: React.FC<ImageWithLoaderProps> = ({ src, alt, className, onRemove, onClick }) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -79,15 +80,16 @@ export const ImageWithLoader: React.FC<ImageWithLoaderProps> = ({ src, alt, clas
   }
 
   return (
-    <div className="relative inline-block group/img">
+    <div className={`relative inline-block group/img ${onClick ? 'cursor-zoom-in' : ''}`}>
         <img 
             src={imageSrc || ''} 
             alt={alt || "Image"} 
-            className={className} 
+            className={className}
+            onClick={onClick} 
         />
         {onRemove && (
             <button 
-                onClick={onRemove}
+                onClick={(e) => { e.stopPropagation(); onRemove(); }}
                 className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full p-1 opacity-0 group-hover/img:opacity-100 transition-opacity shadow-md z-10"
             >
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">

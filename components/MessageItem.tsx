@@ -8,6 +8,7 @@ import { ImageWithLoader } from './ImageWithLoader';
 interface MessageItemProps {
   message: Message;
   onEditImage?: (imageId: string) => void;
+  onImageClick?: (imageId: string) => void;
 }
 
 const LoadingDots = () => (
@@ -18,7 +19,7 @@ const LoadingDots = () => (
     </div>
 );
 
-export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }) => {
+export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage, onImageClick }) => {
   const isUser = message.role === Role.USER;
   const [copied, setCopied] = useState(false);
   
@@ -66,6 +67,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
                          <ImageWithLoader 
                             key={idx} 
                             src={imgId} 
+                            onClick={() => onImageClick && onImageClick(imgId)}
                             className="rounded-xl shadow-sm max-w-[200px] md:max-w-xs border border-gray-200 dark:border-gray-700 mb-3"
                          />
                     ))}
@@ -91,6 +93,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
                 <div className="mt-4">
                     <ImageWithLoader 
                         src={message.generatedImage} 
+                        onClick={() => onImageClick && onImageClick(message.generatedImage!)}
                         className="rounded-xl shadow-md max-w-full md:max-w-md border border-gray-200 dark:border-gray-700"
                     />
                 </div>
