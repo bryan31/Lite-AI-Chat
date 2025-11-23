@@ -7,6 +7,16 @@
 
 它不仅仅是一个聊天机器人，更是一个集成了**复杂推理、创意绘画、视觉理解、联网搜索**于一体的 AI 工作台。无需繁琐配置，开箱即用。
 
+<br/>
+
+<div align="center">
+  <img src="example_images/1.png" alt="Gemini Pro Chat 预览1" width="100%" />
+  <img src="example_images/2.png" alt="Gemini Pro Chat 预览2" width="100%" />
+  <img src="example_images/3.png" alt="Gemini Pro Chat 预览3" width="100%" />
+</div>
+
+<br/>
+
 ---
 
 ## ✨ 核心亮点 (Why use this?)
@@ -79,7 +89,7 @@
 *   **Storage**: IndexedDB (用于高性能存储大尺寸图片)
 
 ## 📂 目录结构
-*   `src/` - 前端 React 代码
-*   `server.js` - 后端 API 代理与静态文件服务
+*   `src/` - Frontend React code
+*   `server.js` - Backend API proxy & static file service
 *   `dist/` - 构建后的静态资源 (运行 run-prod.sh 后生成)
 *   `run-*.sh` - 快捷运行脚本
