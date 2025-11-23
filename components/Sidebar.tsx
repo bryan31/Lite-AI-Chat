@@ -22,7 +22,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteChat
 }) => {
   // Use config from env or default
-  const appTitle = import.meta.env.VITE_APP_TITLE || 'Gemini Pro';
+  const meta = import.meta as any;
+  const appTitle = meta.env?.VITE_APP_TITLE || 'Gemini Pro';
 
   return (
     <>
@@ -94,10 +95,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </div>
           ))}
-        </div>
-        
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 text-center">
-           由 Gemini 3 Pro 驱动
         </div>
       </div>
     </>

@@ -75,7 +75,7 @@ export const generateChatStream = async (
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `Server error: ${response.statusText}`);
+      throw new Error(errData.error || `服务器错误: ${response.statusText}`);
     }
 
     if (config.imageMode) {
@@ -94,7 +94,7 @@ export const generateChatStream = async (
     } else {
       // Handle Streamed Response for Chat Mode
       const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response body");
+      if (!reader) throw new Error("无响应内容");
       
       const decoder = new TextDecoder();
       let fullText = "";

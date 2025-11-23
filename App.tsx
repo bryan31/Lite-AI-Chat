@@ -15,7 +15,10 @@ import {
   Sun,
   Paperclip,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Code2,
+  Plane,
+  PenTool
 } from 'lucide-react';
 
 // Local Storage Keys
@@ -399,23 +402,68 @@ const App: React.FC = () => {
                     </div>
                     <div className="text-center max-w-lg">
                         <h3 className="text-2xl font-medium mb-3 bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-500 dark:from-white dark:to-gray-400">
-                            你好，人类
+                            很高兴见到你
                         </h3>
                         <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm md:text-base">
                             我可以帮你解决复杂问题，或者用 Flash Image 创造惊艳的视觉作品。
                         </p>
                     </div>
                     
-                    <div className="grid grid-cols-1 gap-3 w-full max-w-md">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+                         {/* Example 1: Creative Writing */}
                          <button 
                              onClick={() => {
-                                 setIsImageMode(true);
-                                 setInputValue("Create a cyberpunk city landscape");
+                                 setIsImageMode(false);
+                                 setInputValue("帮我写一个关于时间旅行的科幻故事");
                              }}
                              className="p-4 text-left bg-gray-50 dark:bg-[#1e1f20] hover:bg-gray-100 dark:hover:bg-[#2e2f31] rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group"
                          >
-                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-purple-500 transition-colors">赛博朋克艺术</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-500">使用 Gemini 2.5 Flash Image 生成</span>
+                            <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-blue-500 transition-colors">
+                                <PenTool size={16} /> 创意写作
+                            </span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-500">帮我写一个关于时间旅行的科幻故事</span>
+                         </button>
+
+                         {/* Example 2: Coding */}
+                         <button 
+                             onClick={() => {
+                                 setIsImageMode(false);
+                                 setInputValue("用 React 写一个简单的待办事项列表组件");
+                             }}
+                             className="p-4 text-left bg-gray-50 dark:bg-[#1e1f20] hover:bg-gray-100 dark:hover:bg-[#2e2f31] rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group"
+                         >
+                            <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-blue-500 transition-colors">
+                                <Code2 size={16} /> 代码生成
+                            </span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-500">用 React 写一个简单的待办事项列表组件</span>
+                         </button>
+
+                         {/* Example 3: Image Generation */}
+                         <button 
+                             onClick={() => {
+                                 setIsImageMode(true);
+                                 setInputValue("生成一张赛博朋克风格的城市夜景图");
+                             }}
+                             className="p-4 text-left bg-gray-50 dark:bg-[#1e1f20] hover:bg-gray-100 dark:hover:bg-[#2e2f31] rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group"
+                         >
+                            <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-purple-500 transition-colors">
+                                <ImageIcon size={16} /> 图像创作
+                            </span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-500">生成一张赛博朋克风格的城市夜景图</span>
+                         </button>
+
+                         {/* Example 4: Planning */}
+                         <button 
+                             onClick={() => {
+                                 setIsImageMode(false);
+                                 setInputValue("制定一个去日本京都的5天旅游攻略");
+                             }}
+                             className="p-4 text-left bg-gray-50 dark:bg-[#1e1f20] hover:bg-gray-100 dark:hover:bg-[#2e2f31] rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group"
+                         >
+                            <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-blue-500 transition-colors">
+                                <Plane size={16} /> 旅游计划
+                            </span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-500">制定一个去日本京都的5天旅游攻略</span>
                          </button>
                     </div>
                 </div>
