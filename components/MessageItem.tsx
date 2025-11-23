@@ -55,7 +55,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
             {/* Header Name */}
             <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {isUser ? 'You' : 'Gemini'}
+                    {isUser ? '你' : 'Gemini'}
                 </span>
             </div>
 
@@ -136,15 +136,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
                     <button 
                         onClick={handleCopy}
                         className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-[#1e1f20] transition-colors"
-                        title="Copy"
+                        title="复制"
                     >
                         <Copy size={14} />
-                        {copied && <span className="ml-1 text-xs text-green-500">Copied</span>}
+                        {copied && <span className="ml-1 text-xs text-green-500">已复制</span>}
                     </button>
                     
                     <button 
                          className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-[#1e1f20] transition-colors"
-                         title="Regenerate (Mock)"
+                         title="重新生成 (模拟)"
                     >
                         <RotateCcw size={14} />
                     </button>
@@ -157,7 +157,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEditImage }
                             className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors ml-2"
                         >
                             <ImageIcon size={12} />
-                            Edit Image
+                            编辑图片
                         </button>
                     )}
                 </div>

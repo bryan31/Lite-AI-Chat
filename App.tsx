@@ -117,7 +117,7 @@ const App: React.FC = () => {
   const createNewSession = () => {
     const newSession: ChatSession = {
       id: Date.now().toString(),
-      title: 'New Chat',
+      title: '新对话',
       updatedAt: Date.now(),
       messages: []
     };
@@ -141,7 +141,7 @@ const App: React.FC = () => {
         // Create new session if all deleted
         const newSession: ChatSession = {
             id: Date.now().toString(),
-            title: 'New Chat',
+            title: '新对话',
             updatedAt: Date.now(),
             messages: []
         };
@@ -190,7 +190,7 @@ const App: React.FC = () => {
             const newSessionId = Date.now().toString();
             const newSession: ChatSession = {
                 id: newSessionId,
-                title: 'New Chat',
+                title: '新对话',
                 updatedAt: Date.now(),
                 messages: []
             };
@@ -226,7 +226,7 @@ const App: React.FC = () => {
                  persistedImageId = await saveImageToDB(tempImage);
             } catch (e) {
                 console.error("Failed to save input image to DB", e);
-                alert("Failed to process image. Please try again.");
+                alert("处理图片失败，请重试。");
                 setIsLoading(false);
                 return;
             }
@@ -235,7 +235,7 @@ const App: React.FC = () => {
         const userMsg: Message = {
             id: Date.now().toString(),
             role: Role.USER,
-            text: currentPrompt || (isImageMode ? "Generate image" : "Sent an image"),
+            text: currentPrompt || (isImageMode ? "生成图片" : "发送了一张图片"),
             timestamp: Date.now(),
             images: persistedImageId ? [persistedImageId] : undefined
         };
@@ -253,7 +253,7 @@ const App: React.FC = () => {
         setSessions(prev => prev.map(session => {
             if (session.id === activeSessionIdToUse) {
                 const title = session.messages.length === 0 
-                    ? (currentPrompt.slice(0, 30) || "New Chat") 
+                    ? (currentPrompt.slice(0, 30) || "新对话") 
                     : session.title;
                 
                 return {
@@ -309,7 +309,7 @@ const App: React.FC = () => {
                     return {
                         ...session,
                         messages: session.messages.map(m => 
-                            m.id === lastMsg.id ? { ...m, text: `Error: ${error.message || "Request failed"}. Please try again.`, isError: true } : m
+                            m.id === lastMsg.id ? { ...m, text: `错误: ${error.message || "请求失败"}。请重试。`, isError: true } : m
                         )
                     };
                 }
@@ -364,7 +364,7 @@ const App: React.FC = () => {
                         <option value={MODELS.GEMINI_2_5_PRO}>Gemini 2.5 Pro</option>
                         <option value={MODELS.GEMINI_2_5_FLASH}>Gemini 2.5 Flash</option>
                         {isImageMode && (
-                            <option value={MODELS.GEMINI_IMAGE}>Nano Banana</option>
+                            <option value={MODELS.GEMINI_IMAGE}>Nano Banana (绘图)</option>
                         )}
                     </select>
                     <ChevronDown 
@@ -399,10 +399,10 @@ const App: React.FC = () => {
                     </div>
                     <div className="text-center max-w-lg">
                         <h3 className="text-2xl font-medium mb-3 bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-500 dark:from-white dark:to-gray-400">
-                            Hello, Human
+                            你好，人类
                         </h3>
                         <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm md:text-base">
-                            I can help you solve complex problems with Gemini 3, or create amazing visuals with Flash Image.
+                            我可以帮你解决复杂问题，或者用 Flash Image 创造惊艳的视觉作品。
                         </p>
                     </div>
                     
@@ -414,8 +414,8 @@ const App: React.FC = () => {
                              }}
                              className="p-4 text-left bg-gray-50 dark:bg-[#1e1f20] hover:bg-gray-100 dark:hover:bg-[#2e2f31] rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group"
                          >
-                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-purple-500 transition-colors">Cyberpunk Art</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-500">Generate with Gemini 2.5 Flash Image</span>
+                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 group-hover:text-purple-500 transition-colors">赛博朋克艺术</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-500">使用 Gemini 2.5 Flash Image 生成</span>
                          </button>
                     </div>
                 </div>
@@ -468,8 +468,8 @@ const App: React.FC = () => {
                             }
                         }}
                         placeholder={isImageMode 
-                            ? (attachedImage ? "Describe how to modify this image..." : "Describe the image you want to create...") 
-                            : "Ask Gemini..."}
+                            ? (attachedImage ? "描述如何修改这张图片..." : "描述你想生成的图片...") 
+                            : "问点什么..."}
                         className="w-full bg-transparent border-0 outline-none focus:ring-0 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none py-4 px-6 min-h-[56px] max-h-64"
                         rows={1}
                         style={{ overflow: 'hidden' }} 
@@ -480,7 +480,7 @@ const App: React.FC = () => {
                             <button 
                                 onClick={() => fileInputRef.current?.click()}
                                 className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                title="Attach Image"
+                                title="上传图片"
                             >
                                 <Paperclip size={18} />
                             </button>
@@ -495,7 +495,7 @@ const App: React.FC = () => {
                             <button 
                                 onClick={() => setIsImageMode(!isImageMode)}
                                 className={`p-2 rounded-full transition-colors ${isImageMode ? 'text-purple-600 bg-purple-100 dark:bg-purple-900/30' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'} ${isImageMode ? 'relative z-10' : ''}`}
-                                title={isImageMode ? "Image Mode On" : "Image Mode Off"}
+                                title={isImageMode ? "关闭绘图模式" : "开启绘图模式"}
                             >
                                 <ImageIcon size={18} />
                             </button>
@@ -504,7 +504,7 @@ const App: React.FC = () => {
                                 onClick={() => setIsWebSearch(!isWebSearch)}
                                 disabled={isImageMode}
                                 className={`p-2 rounded-full transition-colors ${isWebSearch ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'} ${isImageMode ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                title="Web Search"
+                                title="联网搜索"
                             >
                                 <Globe size={18} />
                             </button>
@@ -529,7 +529,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 <div className="text-center mt-3 text-[11px] text-gray-400 dark:text-gray-600">
-                    Gemini may display inaccurate info, including about people, so double-check its responses.
+                    Gemini 可能会显示不准确的信息（包括人物信息），请核对回复内容。
                 </div>
             </div>
         </div>

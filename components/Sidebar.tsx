@@ -21,6 +21,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectChat,
   onDeleteChat
 }) => {
+  // Use config from env or default
+  const appTitle = import.meta.env.VITE_APP_TITLE || 'Gemini Pro';
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -40,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       `}>
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100 font-semibold text-lg tracking-tight">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">Gemini Pro</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">{appTitle}</span>
           </div>
           <button onClick={toggleSidebar} className="md:hidden text-gray-500">
             <X size={20} />
@@ -56,14 +59,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-full flex items-center gap-3 bg-gray-200 dark:bg-[#2e2f31] hover:bg-gray-300 dark:hover:bg-[#3c3d40] text-gray-700 dark:text-gray-200 px-4 py-3 rounded-full transition-colors font-medium text-sm"
           >
             <Plus size={18} />
-            <span>New Chat</span>
+            <span>新对话</span>
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 space-y-1">
-          <div className="px-2 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recent</div>
+          <div className="px-2 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">最近对话</div>
           {sessions.length === 0 && (
-             <div className="px-4 py-4 text-sm text-gray-400 text-center italic">No history yet.</div>
+             <div className="px-4 py-4 text-sm text-gray-400 text-center italic">暂无历史记录</div>
           )}
           {sessions.map((session) => (
             <div
@@ -94,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 text-center">
-           Powered by Gemini 3 Pro
+           由 Gemini 3 Pro 驱动
         </div>
       </div>
     </>

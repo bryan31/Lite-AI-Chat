@@ -51,7 +51,7 @@ export const generateChatStream = async (
       // If text is missing or empty, provide a fallback placeholder
       let text = msg.text;
       if (!text || text.trim() === "") {
-          text = msg.generatedImage ? "[Image Generated]" : "[Content]";
+          text = msg.generatedImage ? "[图片已生成]" : "[内容]";
       }
       return {
           role,
@@ -87,8 +87,8 @@ export const generateChatStream = async (
          onChunk(data.text || "", undefined, imageId);
       } else {
          const failureMessage = data.text 
-            ? `${data.text}\n\n*[System: No image was generated.]*`
-            : "Failed to generate image.";
+            ? `${data.text}\n\n*[系统: 未能生成图片]*`
+            : "生成图片失败。";
          onChunk(failureMessage, undefined, undefined);
       }
     } else {
@@ -131,6 +131,6 @@ export const generateChatStream = async (
 
   } catch (error: any) {
     console.error("Chat Service Error:", error);
-    onChunk(`Error: ${error.message}\n\n*Check backend console for details.*`, undefined, undefined);
+    onChunk(`错误: ${error.message}\n\n*请检查后台控制台以获取详细信息。*`, undefined, undefined);
   }
 };
