@@ -60,7 +60,7 @@
     sh run-prod.sh
     ```
     *   初次运行会安装依赖并打包（Build）。
-    *   访问地址: http://localhost:3001
+    *   访问地址: http://localhost:3000
 
 *   **停止**:
     ```bash
