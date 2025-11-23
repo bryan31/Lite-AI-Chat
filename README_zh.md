@@ -9,14 +9,6 @@
 
 <br/>
 
-<div align="center">
-  <img src="example_images/1.png" alt="Gemini Pro Chat 预览1" width="100%" />
-  <img src="example_images/2.png" alt="Gemini Pro Chat 预览2" width="100%" />
-  <img src="example_images/3.png" alt="Gemini Pro Chat 预览3" width="100%" />
-</div>
-
-<br/>
-
 ---
 
 ## ✨ 核心亮点 (Why use this?)

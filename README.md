@@ -9,14 +9,6 @@ It is not just a chatbot, but an AI workbench integrating **complex reasoning, c
 
 <br/>
 
-<div align="center">
-  <img src="example_images/1.jpg" alt="Gemini Pro Chat Preview1" width="100%" />
-  <img src="example_images/2.png" alt="Gemini Pro Chat Preview2" width="100%" />
-  <img src="example_images/3.png" alt="Gemini Pro Chat Preview3" width="100%" />
-</div>
-
-<br/>
-
 ---
 
 ## ✨ Highlights
