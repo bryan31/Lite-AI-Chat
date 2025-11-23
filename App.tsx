@@ -8,7 +8,7 @@ import { ChatSession, Message, Role, Theme, MODELS } from './types';
 import { ImageWithLoader } from './components/ImageWithLoader';
 import { 
   Send, 
-  Menu, 
+  PanelLeft, // Changed from Menu to PanelLeft for better semantics
   Image as ImageIcon, 
   Globe, 
   Moon, 
@@ -28,7 +28,8 @@ const STORAGE_KEY_HISTORY = 'gemini-pro-history';
 const App: React.FC = () => {
   // --- State ---
   const [theme, setTheme] = useState<Theme>('dark');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Default sidebar to OPEN (true) for better desktop experience
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -133,6 +134,8 @@ const App: React.FC = () => {
     setAttachedImage(null);
     setInputValue('');
     if (textareaRef.current) textareaRef.current.focus();
+    // On mobile, close sidebar after creating new chat
+    if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
   const deleteSession = (id: string, e: React.MouseEvent) => {
@@ -346,8 +349,12 @@ const App: React.FC = () => {
         
         <div className="h-14 md:h-16 flex items-center justify-between px-4 sticky top-0 z-10 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800/50">
             <div className="flex items-center gap-2">
-                <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300">
-                    <Menu size={20} />
+                <button 
+                    onClick={() => setSidebarOpen(!sidebarOpen)} 
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300"
+                    title={sidebarOpen ? "收起侧边栏" : "展开侧边栏"}
+                >
+                    <PanelLeft size={20} />
                 </button>
                 
                 {/* Model Selector */}
@@ -512,11 +519,14 @@ const App: React.FC = () => {
                         id="chat-input"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
+                        // --- IME Handling Start ---
                         onCompositionStart={() => { isComposing.current = true; }}
                         onCompositionEnd={() => { isComposing.current = false; }}
+                        // --- IME Handling End ---
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 // If using IME (Input Method Editor), do not send
+                                // Check both our ref and the native event property for maximum compatibility
                                 if (isComposing.current || e.nativeEvent.isComposing) {
                                     return;
                                 }
