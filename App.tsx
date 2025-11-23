@@ -405,7 +405,7 @@ const App: React.FC = () => {
                             很高兴见到你
                         </h3>
                         <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm md:text-base">
-                            我可以帮你解决复杂问题，或者用 Nano Banana 3.0 创造惊艳的视觉作品。
+                            我可以帮你解决复杂问题，或者创造惊艳的视觉作品。
                         </p>
                     </div>
                     
