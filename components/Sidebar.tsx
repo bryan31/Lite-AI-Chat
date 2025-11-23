@@ -21,9 +21,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectChat,
   onDeleteChat
 }) => {
-  // Use config from env or default
-  const meta = import.meta as any;
-  const appTitle = meta.env?.VITE_APP_TITLE || 'Gemini Pro';
+  // Use direct access to ensure Vite's static replacement works correctly.
+  // Casting to any to avoid TypeScript errors if types aren't defined.
+  const appTitle = (import.meta as any).env?.VITE_APP_TITLE || 'Gemini Pro';
 
   return (
     <>
