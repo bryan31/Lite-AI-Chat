@@ -50,6 +50,9 @@ const App: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Track IME composition state (for Chinese/Japanese input)
+  const isComposing = useRef(false);
 
   // --- Effects ---
 
@@ -509,8 +512,14 @@ const App: React.FC = () => {
                         id="chat-input"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
+                        onCompositionStart={() => { isComposing.current = true; }}
+                        onCompositionEnd={() => { isComposing.current = false; }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
+                                // If using IME (Input Method Editor), do not send
+                                if (isComposing.current || e.nativeEvent.isComposing) {
+                                    return;
+                                }
                                 e.preventDefault();
                                 sendMessage();
                             }
