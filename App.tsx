@@ -191,6 +191,44 @@ const App: React.FC = () => {
       setAttachedImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageFiles: File[] = [];
+
+    // Extract all image files from clipboard
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          imageFiles.push(file);
+        }
+      }
+    }
+
+    // If images found, prevent default paste and process them
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+
+      const fileReaders: Promise<string>[] = [];
+
+      imageFiles.forEach(file => {
+        const p = new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        fileReaders.push(p);
+      });
+
+      Promise.all(fileReaders).then(newImages => {
+        setAttachedImages(prev => [...prev, ...newImages]);
+      });
+    }
+  };
+
   const handleImageEditRequest = (imageId: string) => {
       setAttachedImages([imageId]);
       setIsImageMode(true);
@@ -557,6 +595,7 @@ const App: React.FC = () => {
                         id="chat-input"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
+                        onPaste={handlePaste}
                         // --- IME Handling Start ---
                         onCompositionStart={() => { isComposing.current = true; }}
                         onCompositionEnd={() => { isComposing.current = false; }}
@@ -572,12 +611,12 @@ const App: React.FC = () => {
                                 sendMessage();
                             }
                         }}
-                        placeholder={isImageMode 
-                            ? (attachedImages.length > 0 ? "描述如何修改这张图片..." : "描述你想生成的图片...") 
+                        placeholder={isImageMode
+                            ? (attachedImages.length > 0 ? "描述如何修改这张图片..." : "描述你想生成的图片...")
                             : "问点什么..."}
                         className="w-full bg-transparent border-0 outline-none focus:ring-0 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none py-4 px-6 min-h-[56px] max-h-64"
                         rows={1}
-                        style={{ overflow: 'hidden' }} 
+                        style={{ overflow: 'hidden' }}
                     />
 
                     <div className="flex items-center justify-between px-3 pb-3">
