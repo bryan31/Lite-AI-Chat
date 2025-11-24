@@ -39,7 +39,7 @@ const App: React.FC = () => {
   
   // Config State
   const [isImageMode, setIsImageMode] = useState(false);
-  const [isWebSearch, setIsWebSearch] = useState(false);
+  const [isWebSearch, setIsWebSearch] = useState(true);
   
   // Model Selection State
   const [selectedModel, setSelectedModel] = useState<string>(MODELS.GEMINI_3_PRO);
