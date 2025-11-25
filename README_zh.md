@@ -11,6 +11,16 @@
 
 ---
 
+## 📸 界面展示
+
+<div align="center">
+  <img src="screenshot/1.png" alt="界面截图 1" width="800"/>
+  <img src="screenshot/2.png" alt="界面截图 2" width="800"/>
+  <img src="screenshot/3.png" alt="界面截图 3" width="800"/>
+</div>
+
+---
+
 ## ✨ 核心亮点 (Why use this?)
 
 ### 🧠 顶级推理能力 (Gemini 3.0 Pro)

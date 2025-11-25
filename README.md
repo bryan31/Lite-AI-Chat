@@ -11,6 +11,16 @@ It is not just a chatbot, but an AI workbench integrating **complex reasoning, c
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+  <img src="screenshot/1.png" alt="Screenshot 1" width="800"/>
+  <img src="screenshot/2.png" alt="Screenshot 2" width="800"/>
+  <img src="screenshot/3.png" alt="Screenshot 3" width="800"/>
+</div>
+
+---
+
 ## ✨ Highlights
 
 ### 🧠 Top-tier Reasoning (Gemini 3.0 Pro)
